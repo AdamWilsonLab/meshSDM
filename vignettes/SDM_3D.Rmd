@@ -1,0 +1,89 @@
+---
+title: "SDM"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(ENMeval)
+library(ggplot2)
+```
+
+## Data Import
+
+
+```{r}
+d=read.csv("data/plotdata.txt")
+
+```
+
+# Visualize
+
+```{r}
+nColors <- 64
+cols <- as.character(cut(d$dists,breaks=nColors,labels= inferno(nColors)))
+
+
+cols <- as.character(cut(d$dists,breaks=,labels= inferno(nColors)))
+cols=ifelse(d$Illuminance..PCV.<0.5&d$dists< -0.002,"red","black")
+
+
+plot3d(d[,c("X..X","Y","Z")],type="p", col=cols,size = 0.1)
+
+# capture snapshot
+snapshot3d(filename = '3dplot.png', fmt = 'png')
+
+```
+
+
+
+## Plot
+
+```{r}
+
+ggplot(d,aes(dists))+
+  geom_histogram()
+
+
+gplot(env)+
+  geom_raster(aes(fill=value))+
+  facet_wrap(~variable)+
+  geom_point(data=as.data.frame(OcR),aes(x=coords.x1,y=coords.x2))+
+  scale_fill_viridis_c(trans="asinh")
+
+```
+
+
+## EDA
+
+```{r}
+bg <- randomPoints(env[[1]],mask=env[[1]], n=10000)%>%as.data.frame()
+
+
+```
+
+## Fit Distribution Models
+
+```{r}
+
+preds <- ENMevaluate(coordinates(OcR)[,c(1:2)], env, bg.coords=bg, method='jackknife', RMvalues=c(1,2), fc=c('L','LQ','LQP'), parallel=TRUE)
+
+```
+
+
+## Plot
+
+```{r}
+plot(preds@predictions[[which(eval2@results$delta.AICc==0)]], main="Relative occurrence rate")
+
+```
+
+
+## Evaluate
+```{r}
+aic.opt <- preds@models[[which(eval2@results$delta.AICc==0)]]
+var.importance(aic.opt)
+
+eval.plot(preds@results, 'Mean.AUC', var='Var.AUC')
+```

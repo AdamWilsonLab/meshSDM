@@ -1,0 +1,95 @@
+---
+title: "CloudCompare"
+output: html_document
+---
+
+```{r}
+library(rgl)
+library(viridis)
+
+devtools::install_github("AdamWilsonLab/PointCloudViewer")
+
+```
+
+```{r}
+d=read.csv("data/Vertices.txt")
+colnames(d)
+```
+
+# Overall Workflow
+
+Agisoft
+
+  * Import photos, build 3D model
+  * Classify points
+  * Identify recruits as polygons
+  * Export to txt file of points
+
+CloudCompare
+
+  * Subsample points or use mesh vertices?
+  * Edit -> Scalar Fields -> Export Coordinates to SF
+  * Compute a gaussian smooth (Edit->Scalar Fields -> Gaussian Filter) of each dimension (x, y, and z) using the desired neighborhood (0.01, 0.1, etc.) for EACH dimension and each 'scale' (e.g. 0.0025, 0.01, 0.1, etc.)
+  * Roughness
+  * Compute Illumination (Plugins -> P.C.V.)
+  * Edit -> Normals -> convert to -> Dip Dip Direction (slope and aspect)
+  * Export to an ascii file and import into R.
+  
+R
+* Import to R
+* Compute the 3d angle from each point to 1) it's 'smoothed' point and 2) the normal vector for that point. 
+* Compute the distance from each point to it's smoothed surface in 3d space 
+* If the angle is greater than 90, make the distance negative (a "hole").  If less - it stays positive and is a 'hill'.      
+
+
+
+
+# Call Cloud Compare
+
+```{r}
+
+## define path to CloudCompare
+cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
+preamble="-AUTO_SAVE OFF -NO_TIMESTAMP -O "
+
+input="data/vertices.txt"
+processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
+#processing="-COORD_TO_SF X -GAUSSFILTER 0.01"
+export="-C_EXPORT_FMT ASC -ADD_HEADER -ADD_PTS_COUNT -SAVE_CLOUDS"
+
+cmd=paste(cc,preamble,input,processing,export)
+cmd
+
+system(cmd)
+```
+
+```{r}
+d2=read.csv("data/vertices_NORMS_REORIENTED_X_TO_SF.asc")
+```
+
+
+# Distance to Smooth
+```{r}
+d$dist=dist3D(d$X..X,d$Coord..X.smooth.0.01.,d$Y,d$Coord..Y.smooth.0.01.,d$Z,d$Coord..Z.smooth.0.01.)
+```
+
+
+# Angle to smooth
+```{r}
+d$angle=apply(d[,c("X..X","Y","Z",
+                "Coord..X.smooth.0.01.",
+                "Coord..Y.smooth.0.01.",
+                "Coord..Z.smooth.0.01.",
+                "Nx","Ny","Nz")],1,angle3D)
+```
+
+# Correct Sign of distance
+```{r}
+d$sign=ifelse(d$angle<90,-1,1)
+d$dists=d$dist*d$sign
+```
+
+# Export
+```{r}
+write.csv(d,"data/plotdata.txt")
+```
