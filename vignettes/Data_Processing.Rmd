@@ -1,5 +1,5 @@
 ---
-title: "CloudCompare"
+title: "Data Processing"
 output: html_document
 ---
 
@@ -7,14 +7,10 @@ output: html_document
 library(rgl)
 library(viridis)
 
-devtools::install_github("AdamWilsonLab/PointCloudViewer")
+#devtools::install_github("AdamWilsonLab/PointCloudViewer")
 
 ```
 
-```{r}
-d=read.csv("data/Vertices.txt")
-colnames(d)
-```
 
 # Overall Workflow
 
@@ -42,9 +38,13 @@ R
 * If the angle is greater than 90, make the distance negative (a "hole").  If less - it stays positive and is a 'hill'.      
 
 
+```{r}
+d=read.csv("data/Vertices.txt")
+colnames(d)
+```
 
 
-# Call Cloud Compare
+# Cloud Compare Command line
 
 ```{r}
 
@@ -53,8 +53,8 @@ cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
 preamble="-AUTO_SAVE OFF -NO_TIMESTAMP -O "
 
 input="data/vertices.txt"
-processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
-#processing="-COORD_TO_SF X -GAUSSFILTER 0.01"
+#processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
+processing="-COORD_TO_SF X -GAUSS 0.01"
 export="-C_EXPORT_FMT ASC -ADD_HEADER -ADD_PTS_COUNT -SAVE_CLOUDS"
 
 cmd=paste(cc,preamble,input,processing,export)
