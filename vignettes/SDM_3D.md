@@ -239,13 +239,14 @@ scatterplot3js(fitdata$x,fitdata$y,fitdata$z, color=cols,size = 0.05,stroke = NU
 
 Show values along a transect.  
 
-Extract a transect (I selected the y values using cloud compare)
+Extract a transect (I selected the y values using cloud compare).  This really shows the value of doing this in 3D - it can easily capture really complex terrain including caves, etc.
 
 
 ```r
 transect=
   cbind(fitdata,p1)%>%
-  filter(between(y,-0.122,-0.121))%>%
+#  filter(between(y,-0.122,-0.121))%>%
+  filter(between(y,-0.027,-0.0265))%>%
   gather("var","value",-x,-y,-z,-pres,-p1)%>%
   arrange(value,x,z)
 ```
@@ -256,9 +257,10 @@ Environmental values:
 ggplot(transect,aes(x=x,y=z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
-  facet_grid(var~.)+
+  facet_wrap(~var)+
   xlab("Distance along transect (m)")+
-  ylab("Height")
+  ylab("Height")+
+  coord_equal()
 ```
 
 ![plot of chunk unnamed-chunk-11](SDM_3D//unnamed-chunk-11-1.png)
@@ -270,10 +272,13 @@ ggplot(transect,aes(x=x,y=z,col=p1))+
   geom_point(size=.7)+
   scale_color_gradientn(colors=c("blue","grey","red"),name="Habitat\nSuitability")+
   xlab("Distance along transect (m)")+
-  ylab("Height")
+  ylab("Height")+
+  coord_equal()
 ```
 
 ![plot of chunk unnamed-chunk-12](SDM_3D//unnamed-chunk-12-1.png)
+
+An added bonus is that this transect kind of looks like a buffalo (head with horns on the left side).  It looks a little messy there because the transect is actually a little ribbon (not just a one-dimensional line) and so includes several values at each y position.  We can think of better ways to show that.
 
 ## Export data
 
