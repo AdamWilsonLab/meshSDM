@@ -4,10 +4,15 @@ output: html_document
 ---
 
 ```{r}
-library(rgl)
-library(viridis)
+library(rgdal)
+library(sf)
+library(raster)
+library(units)
+library(dplyr)
+library(tidyr)
 
 #devtools::install_github("AdamWilsonLab/PointCloudViewer")
+proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 ```
 
@@ -40,13 +45,12 @@ R
 
 ```{r}
 d=read.csv("data/Vertices.txt")
-colnames(d)
 ```
 
 
 # Cloud Compare Command line
 
-```{r}
+```{r, eval=F}
 
 ## define path to CloudCompare
 cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
@@ -64,7 +68,7 @@ system(cmd)
 ```
 
 ```{r}
-d2=read.csv("data/vertices_NORMS_REORIENTED_X_TO_SF.asc")
+#d2=read.csv("data/vertices_NORMS_REORIENTED_X_TO_SF.asc")
 ```
 
 
@@ -89,7 +93,83 @@ d$sign=ifelse(d$angle<90,-1,1)
 d$dists=d$dist*d$sign
 ```
 
-# Export
+## Create spatial object
+
 ```{r}
-write.csv(d,"data/plotdata.txt")
+d=d%>%
+  st_as_sf(coords=1:3)%>%
+  st_set_crs(proj)
 ```
+
+## Merge with recruit data
+
+```{r}
+
+datadir="/Users/adamw/Documents/Work/advising/Angela/data/20180514_Data"
+
+# union points and polygons
+recruits1<-read_sf(datadir,"EcT1_3r_OcR_plg")%>% 
+  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+  st_set_crs(proj)%>%  # assign UTM projection
+  st_cast("MULTIPOLYGON") # close all the rings to make complete polygons
+
+recruits2<-read_sf(datadir,"EcT1_3r_OcR_pnt")%>% 
+  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+  st_set_crs(proj)%>%  # assign UTM projection
+  st_buffer(0.001)%>%  # assign UTM projection
+  st_cast("MULTIPOLYGON")%>% # close all the rings to make complete polygons
+  st_zm(drop=F,what="Z") # add empty Z dimension to merge with polygons 
+
+recruits=rbind(recruits1,recruits2)
+
+```
+
+# Subset and rename data
+
+Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter.
+```{r}
+
+env=d%>%
+  select(x=Coord..X,
+         y=Coord..Y,
+         z=Coord..Z,
+         exposure=Illuminance..PCV.,
+         rough_0.01=Roughness.0.01.,
+         rough_0.1=Roughness.0.1.,
+         dists=dists)%>%
+  mutate(pres=0,
+         taxa=NA)
+
+```
+
+# Merge points and polygons
+
+```{r}
+recruits_int=st_intersection(recruits,env)%>%
+  mutate(pres=1)%>%
+  rename(taxa=NAME)%>%
+  group_by(FID,taxa)
+
+obs=recruits_int%>%
+  summarise(x=mean(x),
+            y=mean(y),
+            z=mean(z),
+            exposure=min(exposure),
+            rough_0.01=max(rough_0.01),
+            rough_0.1=max(rough_0.1),
+            dists=min(dists),
+            pres=mean(pres))%>%
+  st_cast("POINT")%>%
+  select(-FID)
+
+fulld=rbind(env,obs)
+
+# add an 'id' column to uniquely identify each point.
+fulld$id=1:nrow(fulld)
+```
+
+```{r}
+save(fulld,file="data/model.Rdata")
+
+```
+
