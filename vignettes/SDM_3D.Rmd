@@ -115,8 +115,10 @@ Create a subsetted, non-spatial table to use for model fitting and scale the var
 ```{r}
 fitdata=fulld%>%
   select(pres,x,y,z,exposure,rough_0.01,rough_0.1,dists)%>% #select which variables to include
-  mutate(exposure=scale(exposure),rough_0.01=scale(rough_0.01),
-         rough_0.1=scale(rough_0.1),dists=scale(dists))%>%
+  mutate(exposure=as.numeric(scale(exposure)),
+         rough_0.01=as.numeric(scale(rough_0.01)),
+         rough_0.1=as.numeric(scale(rough_0.1)),
+         dists=as.numeric(scale(dists)))%>%
     st_set_geometry(NULL)%>%  # drop the geometry column
   na.omit() # drop rows with missing variables
 ```
@@ -186,6 +188,40 @@ Interactive 3D Figure of Habitat Suitability (same as above using different plot
 
 ```{r,as.is=T, cache=F, eval=F}
 scatterplot3js(fitdata$x,fitdata$y,fitdata$z, color=cols,size = 0.05,stroke = NULL,pch=".")
+```
+
+## Transect
+
+Show values along a transect.  
+
+Extract a transect (I selected the y values using cloud compare)
+
+```{r}
+transect=
+  cbind(fitdata,p1)%>%
+  filter(between(y,-0.122,-0.121))%>%
+  gather("var","value",-x,-y,-z,-pres,-p1)%>%
+  arrange(value,x,z)
+
+```
+
+Environmental values:
+```{r}
+ggplot(transect,aes(x=x,y=z,col=value))+
+  geom_point(size=.7)+
+  scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
+  facet_grid(var~.)+
+  xlab("Distance along transect (m)")+
+  ylab("Height")
+```
+
+Predicted habitat suitability.  Note some (but not all) little holes full of red.
+```{r}
+ggplot(transect,aes(x=x,y=z,col=p1))+
+  geom_point(size=.7)+
+  scale_color_gradientn(colors=c("blue","grey","red"),name="Habitat\nSuitability")+
+  xlab("Distance along transect (m)")+
+  ylab("Height")
 ```
 
 ## Export data
