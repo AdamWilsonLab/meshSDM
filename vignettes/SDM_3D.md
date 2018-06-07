@@ -11,6 +11,9 @@ Load packages, etc.
 
 
 ```r
+options(java.parameters = "-Xmx2048m")
+library(rJava)
+
 library(rgdal)
 library(sf,quietly = T)
 library(sf,quietly = T)
@@ -39,34 +42,30 @@ This reads in the data object created with Data_Processing.Rmd.
 
 
 ```r
-getwd()
-```
-
-```
-## [1] "/Users/adamw/Documents/repos/CoralSDM"
-```
-
-```r
 load("data/model.Rdata")
+d$taxa[is.na(d$taxa)]="NULL"
+d=na.omit(d)
 
-kable(head(fulld))
+kable(head(d))
 ```
 
 
 
-|         x|         y|         z| exposure| rough_0.01| rough_0.1|      dists| pres|taxa | id|geometry                                 |
-|---------:|---------:|---------:|--------:|----------:|---------:|----------:|----:|:----|--:|:----------------------------------------|
-| -0.120020| -0.481466| -0.270159| 0.678460|   0.000769|  0.003606| -0.0092520|    0|NA   |  1|c(-0.12002027, -0.48146573, -0.27015883) |
-| -0.128400| -0.481104| -0.270568| 0.682622|   0.000492|  0.000607| -0.0090471|    0|NA   |  2|c(-0.12839967, -0.4811044, -0.27056769)  |
-| -0.125073| -0.481106| -0.270931| 0.685744|   0.000862|  0.002328| -0.0090123|    0|NA   |  3|c(-0.12507321, -0.48110572, -0.27093115) |
-| -0.112946| -0.482550| -0.266880| 0.672216|   0.000235|  0.003036| -0.0098129|    0|NA   |  4|c(-0.11294573, -0.48254982, -0.26687956) |
-| -0.133142| -0.481178| -0.269646| 0.693028|   0.000411|  0.002267| -0.0092736|    0|NA   |  5|c(-0.13314202, -0.48117775, -0.26964629) |
-| -0.117696| -0.481763| -0.269313| 0.675338|   0.000506|  0.003650| -0.0094357|    0|NA   |  6|c(-0.1176962, -0.48176348, -0.26931307)  |
+|taxa |       Rf|       Gf|       Bf| class|       Nx|        Ny|        Nz| X_smooth_10| Y_smooth_10| Z_smooth_10| X_smooth_5| Y_smooth_5| Z_smooth_5|    gc_10|     gc_5| rough_10|  rough_5|   aspect|    slope|   dist_10|    dist_5| angle_10|  angle_5| sign_10|   hole_10|   gcs_10| sign_5|     hole_5| gcs_5|       X|        Y|        Z| pres| id|
+|:----|--------:|--------:|--------:|-----:|--------:|---------:|---------:|-----------:|-----------:|-----------:|----------:|----------:|----------:|--------:|--------:|--------:|--------:|--------:|--------:|---------:|---------:|--------:|--------:|-------:|---------:|--------:|------:|----------:|-----:|-------:|--------:|--------:|----:|--:|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  1|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  2|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  3|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  4|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  5|
+|Esp  | 0.231373| 0.258824| 0.129412|     3| 0.963878| -0.133805| -0.202748|    0.234749|   -0.038594|    -0.09787|   0.236314|  -0.036712|  -0.097472| 350.6579| 2372.272| 0.000811| 0.000348| 277.3898| 81.39322| 0.0038411| 0.0013574|   111.44| 84.94856|       1| 0.0030888| 199.5404|     -1| -0.0006447|     0| 0.23642| -0.03628| -0.09823|    1|  6|
 
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 
 ```r
-fulldl=gather(fulld,key=var,value = val,-x,-y,-z,-id, -taxa,-pres,-geometry)%>%
+dl=d%>%sample_frac(.25)%>%
+  select(-Bf,-Gf,-Rf)%>% # remove a few variables we won't need in this dataset
+  gather(key=var,value = val,-X,-Y,-Z,-id, -taxa,-pres)%>%
   mutate(presence=factor(pres,labels=c("Background","Octocoral Presence")))
 ```
 
@@ -78,7 +77,7 @@ Plot the distribution of environmental variables.
 
 
 ```r
-fulldl%>%
+dl%>%
   ggplot(aes(val,col=presence))+
   geom_density(aes(y=..scaled..))+
   facet_wrap(~var, scales="free")+
@@ -88,16 +87,14 @@ fulldl%>%
 ```
 
 ```
-## Warning: Removed 4 rows containing non-finite values (stat_density).
+## Error in eval(lhs, parent, parent): object 'dl' not found
 ```
-
-![plot of chunk densityplot](SDM_3D//densityplot-1.png)
 
 ## Boxplot comparing background with presences
 
 
 ```r
-fulldl%>%
+dl%>%
   ggplot(aes(x=presence,y=val))+
   geom_boxplot()+
   facet_wrap(~var, scales="free_y")+
@@ -117,21 +114,40 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
     scale_fill_gradient(low = low, high = high)
 }
 
-ggpairs(fulld,columns=4:7,  lower = list(continuous = my_bin))
+d%>%
+  sample_n(100000)%>%
+  select(contains("rough"),contains("hole"),contains("gcs"))%>%
+  ggpairs(lower = list(continuous = my_bin))
 ```
 
 ![plot of chunk unnamed-chunk-2](SDM_3D//unnamed-chunk-2-1.png)
 
-## 3D Plot
 
-Plot of the new 'dists' metric. We really need a better name.
+## Substrate Type
 
 
 ```r
-scatter3D(fulld$x, fulld$y, fulld$z,colvar = fulld$dists,bty = "g", cex=.01,theta = 100, phi = 0)
+d%>%
+  ggplot(aes(x=as.factor(class),group=as.factor(pres),fill=as.factor(pres)))+
+  stat_count(aes(y=..prop..), position='dodge')+
+  scale_fill_manual(values=c("black","red"),name="Presence\nAbsence")+
+  xlab("Point Classification")+
+  ylab("Proportion of Presence/Absences")
 ```
 
 ![plot of chunk unnamed-chunk-3](SDM_3D//unnamed-chunk-3-1.png)
+
+
+## 3D Plot
+
+Plot of the new 'hole' metric. 
+
+
+```r
+scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi = 0)
+```
+
+![plot of chunk unnamed-chunk-4](SDM_3D//unnamed-chunk-4-1.png)
 
 ```r
 # Or make an interactive plot:
@@ -148,14 +164,18 @@ Create a subsetted, non-spatial table to use for model fitting and scale the var
 
 
 ```r
-fitdata=fulld%>%
-  select(pres,x,y,z,exposure,rough_0.01,rough_0.1,dists)%>% #select which variables to include
-  mutate(exposure=as.numeric(scale(exposure)),
-         rough_0.01=as.numeric(scale(rough_0.01)),
-         rough_0.1=as.numeric(scale(rough_0.1)),
-         dists=as.numeric(scale(dists)))%>%
-    st_set_geometry(NULL)%>%  # drop the geometry column
-  na.omit() # drop rows with missing variables
+nbg=10000  # number of background points to select
+
+subset_id=c(d$id[d$pres==1], # keep all presences
+            d$id[sample(which(d$pres==0),nbg,replace = F)])  # sample only nbg background points
+
+fitdata=d%>%
+  mutate(pres=as.logical(pres),
+         class=as.factor(class))%>%
+  filter(id%in%subset_id)%>%
+  select(pres,X,Y,Z,class,gcs_10,gcs_5,rough_10,rough_5,hole_10,hole_5,slope,aspect)%>% #select which variables to include
+  mutate_if(is.numeric, function(x) as.vector(scale(x)))%>%  #scale all numeric variables so they have a mean of 0 and slope of 1
+  na.omit()#%>% # drop rows with missing variables
 ```
 
 ## Fit Maxent Distribution Model
@@ -164,7 +184,8 @@ There are lots of options that will need to be considered.  This is one basic wa
 
 
 ```r
-m1 <- maxent(x=fitdata[,-c(1:4)],p=fitdata[,1],
+m1 <- maxent(x=select(fitdata,-X,-Y,-Z,-pres),
+             p=as.numeric(fitdata$pres),
     args=c(
 		'randomtestpoints=30',
 		'betamultiplier=1',
@@ -173,10 +194,11 @@ m1 <- maxent(x=fitdata[,-c(1:4)],p=fitdata[,1],
 		'product=false',
 		'threshold=false',
 		'hinge=true',
-		'threads=2',
+		'threads=4',
 		'responsecurves=true',
-		'jackknife=false',
-		'askoverwrite=false'))
+		'jackknife=true',
+		'askoverwrite=false'),
+		path="output")
 ```
 
 ## Validation
@@ -192,7 +214,7 @@ Need to add model comparison, validation, etc.
 plot(m1)
 ```
 
-![plot of chunk unnamed-chunk-5](SDM_3D//unnamed-chunk-5-1.png)
+![plot of chunk unnamed-chunk-6](SDM_3D//unnamed-chunk-6-1.png)
 
 
 ### Response Curves
@@ -204,14 +226,21 @@ Relationship between each predictor (x-axis) and 'habitat suitability.'  These a
 response(m1,expand=0)
 ```
 
-![plot of chunk unnamed-chunk-6](SDM_3D//unnamed-chunk-6-1.png)
+![plot of chunk unnamed-chunk-7](SDM_3D//unnamed-chunk-7-1.png)
 
 ### Predictions
 
-Predict suitability across the full landscape.
+Predict suitability across the full landscape (for each point).
 
 ```r
-p1 <- predict(m1, fitdata[,-1])
+# make random groups to reduce memory during predictions
+d$group=rep(1:100,len=nrow(d))
+
+# calculate the predictions for each point
+p1=d%>%
+  group_by(group)%>% #this breaks the full dataset down by group to make the predict() go faster
+  do(pred=predict(m1, x=.))%>%  # predict habitat suitability for each point
+  unnest()
 ```
 
 ## Predicted habitat suitability
@@ -222,11 +251,21 @@ p1 <- predict(m1, fitdata[,-1])
 ```r
 nColors <- 64
 cols <- as.character(cut(p1,breaks=nColors,labels= rainbow(nColors)))
-
-scatter3D(fitdata$x, fitdata$y, fitdata$z,colvar = p1,bty = "g", cex=.01,theta = 100, phi = 0)
 ```
 
-![plot of chunk unnamed-chunk-8](SDM_3D//unnamed-chunk-8-1.png)
+```
+## Error in cut.default(p1, breaks = nColors, labels = rainbow(nColors)): 'x' must be numeric
+```
+
+```r
+scatter3D(fitdata$X, fitdata$Y, fitdata$Z,colvar = p1,bty = "g", cex=.01,theta = 100, phi = 0)
+```
+
+```
+## Error in scatter3D(fitdata$X, fitdata$Y, fitdata$Z, colvar = p1, bty = "g", : 'colvar' should have same length as 'x', 'y' and 'z'
+```
+
+![plot of chunk unnamed-chunk-9](SDM_3D//unnamed-chunk-9-1.png)
 
 Interactive 3D Figure of Habitat Suitability (same as above using different plotting function).
 
@@ -244,39 +283,70 @@ Extract a transect (I selected the y values using cloud compare).  This really s
 
 ```r
 transect=
-  cbind(fitdata,p1)%>%
+  cbind.data.frame(d,pred=p1$pred)%>%
 #  filter(between(y,-0.122,-0.121))%>%
-  filter(between(y,-0.027,-0.0265))%>%
-  gather("var","value",-x,-y,-z,-pres,-p1)%>%
-  arrange(value,x,z)
+  filter(between(Y,-0.027,-0.0265))%>%
+  mutate(gcs_5=sign(gcs_5)*log(abs(gcs_5)),gcs_10=sign(gcs_10)*log(abs(gcs_10)))%>%
+  gather("var","value",-X,-Y,-Z,-pres,-class,-pred,-taxa,-id)%>%
+  arrange(value,X,Z)
 ```
 
 Environmental values:
 
 ```r
-ggplot(transect,aes(x=x,y=z,col=value))+
+transect%>%
+  filter(var%in%c("gcs_10","gcs_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
   facet_wrap(~var)+
   xlab("Distance along transect (m)")+
-  ylab("Height")+
+  ylab("Value")+
   coord_equal()
 ```
 
-![plot of chunk unnamed-chunk-11](SDM_3D//unnamed-chunk-11-1.png)
+![plot of chunk unnamed-chunk-12](SDM_3D//unnamed-chunk-12-1.png)
+
+```r
+transect%>%
+  filter(var%in%c("hole_10","hole_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
+  geom_point(size=.7)+
+  scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
+  facet_wrap(~var)+
+  xlab("Distance along transect (m)")+
+  ylab("Value")+
+  coord_equal()
+```
+
+![plot of chunk unnamed-chunk-12](SDM_3D//unnamed-chunk-12-2.png)
+
+```r
+transect%>%
+  filter(var%in%c("rough_10","rough_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
+  geom_point(size=.7)+
+  scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
+  facet_wrap(~var)+
+  xlab("Distance along transect (m)")+
+  ylab("Value")+
+  coord_equal()
+```
+
+![plot of chunk unnamed-chunk-12](SDM_3D//unnamed-chunk-12-3.png)
 
 Predicted habitat suitability.  Note some (but not all) little holes full of red.
 
 ```r
-ggplot(transect,aes(x=x,y=z,col=p1))+
-  geom_point(size=.7)+
-  scale_color_gradientn(colors=c("blue","grey","red"),name="Habitat\nSuitability")+
+ggplot(transect,aes(x=X,y=Z,col=pred))+
+  geom_point(size=.3)+
+  scale_color_gradientn(colors=c("blue","blue","blue","red"),name="Habitat\nSuitability",trans="log10")+
   xlab("Distance along transect (m)")+
   ylab("Height")+
   coord_equal()
 ```
 
-![plot of chunk unnamed-chunk-12](SDM_3D//unnamed-chunk-12-1.png)
+![plot of chunk unnamed-chunk-13](SDM_3D//unnamed-chunk-13-1.png)
 
 An added bonus is that this transect kind of looks like a buffalo (head with horns on the left side).  It looks a little messy there because the transect is actually a little ribbon (not just a one-dimensional line) and so includes several values at each y position.  We can think of better ways to show that.
 
@@ -286,7 +356,7 @@ Export the data (with predictions) in a format that can be opened by cloud compa
 
 
 ```r
-write.csv(cbind.data.frame(fitdata,p1),"data/modeloutput.txt")
+write.csv(cbind.data.frame(d,pred=p1$pred),"data/modeloutput.txt")
 ```
 
 ## Render this document to markdown

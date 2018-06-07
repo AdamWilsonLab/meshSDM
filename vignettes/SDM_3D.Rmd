@@ -13,6 +13,9 @@ knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
 ```
 
 ```{r libraries, warning=FALSE,message=FALSE, cache=F}
+options(java.parameters = "-Xmx2048m")
+library(rJava)
+
 library(rgdal)
 library(sf,quietly = T)
 library(sf,quietly = T)
@@ -41,15 +44,18 @@ library(plot3D)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-getwd()
 load("data/model.Rdata")
+d$taxa[is.na(d$taxa)]="NULL"
+d=na.omit(d)
 
-kable(head(fulld))
+kable(head(d))
 ```
 
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
-fulldl=gather(fulld,key=var,value = val,-x,-y,-z,-id, -taxa,-pres,-geometry)%>%
+dl=d%>%sample_frac(.25)%>%
+  select(-Bf,-Gf,-Rf)%>% # remove a few variables we won't need in this dataset
+  gather(key=var,value = val,-X,-Y,-Z,-id, -taxa,-pres)%>%
   mutate(presence=factor(pres,labels=c("Background","Octocoral Presence")))
 ```
 
@@ -61,7 +67,7 @@ Plot the distribution of environmental variables.
 
 ```{r densityplot}
 
-fulldl%>%
+dl%>%
   ggplot(aes(val,col=presence))+
   geom_density(aes(y=..scaled..))+
   facet_wrap(~var, scales="free")+
@@ -73,7 +79,7 @@ fulldl%>%
 ## Boxplot comparing background with presences
 
 ```{r, warning=F}
-fulldl%>%
+dl%>%
   ggplot(aes(x=presence,y=val))+
   geom_boxplot()+
   facet_wrap(~var, scales="free_y")+
@@ -90,15 +96,31 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
     scale_fill_gradient(low = low, high = high)
 }
 
-ggpairs(fulld,columns=4:7,  lower = list(continuous = my_bin))
+d%>%
+  sample_n(100000)%>%
+  select(contains("rough"),contains("hole"),contains("gcs"))%>%
+  ggpairs(lower = list(continuous = my_bin))
 ```
+
+
+## Substrate Type
+
+```{r, warning=F}
+d%>%
+  ggplot(aes(x=as.factor(class),group=as.factor(pres),fill=as.factor(pres)))+
+  stat_count(aes(y=..prop..), position='dodge')+
+  scale_fill_manual(values=c("black","red"),name="Presence\nAbsence")+
+  xlab("Point Classification")+
+  ylab("Proportion of Presence/Absences")
+```
+
 
 ## 3D Plot
 
-Plot of the new 'dists' metric. We really need a better name.
+Plot of the new 'hole' metric. 
 
 ```{r,as.is=T, cache=F}
-scatter3D(fulld$x, fulld$y, fulld$z,colvar = fulld$dists,bty = "g", cex=.01,theta = 100, phi = 0)
+scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi = 0)
 
 # Or make an interactive plot:
 #nColors <- 64
@@ -113,14 +135,20 @@ scatter3D(fulld$x, fulld$y, fulld$z,colvar = fulld$dists,bty = "g", cex=.01,thet
 Create a subsetted, non-spatial table to use for model fitting and scale the variables.
 
 ```{r}
-fitdata=fulld%>%
-  select(pres,x,y,z,exposure,rough_0.01,rough_0.1,dists)%>% #select which variables to include
-  mutate(exposure=as.numeric(scale(exposure)),
-         rough_0.01=as.numeric(scale(rough_0.01)),
-         rough_0.1=as.numeric(scale(rough_0.1)),
-         dists=as.numeric(scale(dists)))%>%
-    st_set_geometry(NULL)%>%  # drop the geometry column
-  na.omit() # drop rows with missing variables
+nbg=10000  # number of background points to select
+
+subset_id=c(d$id[d$pres==1], # keep all presences
+            d$id[sample(which(d$pres==0),nbg,replace = F)])  # sample only nbg background points
+
+fitdata=d%>%
+  mutate(pres=as.logical(pres),
+         class=as.factor(class))%>%
+  filter(id%in%subset_id)%>%
+  select(pres,X,Y,Z,class,gcs_10,gcs_5,rough_10,rough_5,hole_10,hole_5,slope,aspect)%>% #select which variables to include
+  mutate_if(is.numeric, function(x) as.vector(scale(x)))%>%  #scale all numeric variables so they have a mean of 0 and slope of 1
+  na.omit()#%>% # drop rows with missing variables
+
+
 ```
 
 ## Fit Maxent Distribution Model
@@ -128,7 +156,8 @@ fitdata=fulld%>%
 There are lots of options that will need to be considered.  This is one basic way:
 
 ```{r maxent}
-m1 <- maxent(x=fitdata[,-c(1:4)],p=fitdata[,1],
+m1 <- maxent(x=select(fitdata,-X,-Y,-Z,-pres),
+             p=as.numeric(fitdata$pres),
     args=c(
 		'randomtestpoints=30',
 		'betamultiplier=1',
@@ -137,9 +166,9 @@ m1 <- maxent(x=fitdata[,-c(1:4)],p=fitdata[,1],
 		'product=false',
 		'threshold=false',
 		'hinge=true',
-		'threads=2',
+		'threads=4',
 		'responsecurves=true',
-		'jackknife=false',
+		'jackknife=true',
 		'askoverwrite=false'))
 
 ```
@@ -167,9 +196,18 @@ response(m1,expand=0)
 
 ### Predictions
 
-Predict suitability across the full landscape.
-```{r}
-p1 <- predict(m1, fitdata[,-1])
+Predict suitability across the full landscape (for each point).
+```{r, warning=F}
+
+# make random groups to reduce memory during predictions
+d$group=rep(1:100,len=nrow(d))
+
+# calculate the predictions for each point
+p1=d%>%
+  group_by(group)%>% #this breaks the full dataset down by group to make the predict() go faster
+  do(pred=predict(m1, x=.))%>%  # predict habitat suitability for each point
+  unnest()
+
 ```
 
 ## Predicted habitat suitability
@@ -180,7 +218,7 @@ p1 <- predict(m1, fitdata[,-1])
 nColors <- 64
 cols <- as.character(cut(p1,breaks=nColors,labels= rainbow(nColors)))
 
-scatter3D(fitdata$x, fitdata$y, fitdata$z,colvar = p1,bty = "g", cex=.01,theta = 100, phi = 0)
+scatter3D(fitdata$X, fitdata$Y, fitdata$Z,colvar = p1,bty = "g", cex=.01,theta = 100, phi = 0)
 
 ```
 
@@ -198,30 +236,53 @@ Extract a transect (I selected the y values using cloud compare).  This really s
 
 ```{r}
 transect=
-  cbind(fitdata,p1)%>%
+  cbind.data.frame(d,pred=p1$pred)%>%
 #  filter(between(y,-0.122,-0.121))%>%
-  filter(between(y,-0.027,-0.0265))%>%
-  gather("var","value",-x,-y,-z,-pres,-p1)%>%
-  arrange(value,x,z)
+  filter(between(Y,-0.027,-0.0265))%>%
+  mutate(gcs_5=sign(gcs_5)*log(abs(gcs_5)),gcs_10=sign(gcs_10)*log(abs(gcs_10)))%>%
+  gather("var","value",-X,-Y,-Z,-pres,-class,-pred,-taxa,-id)%>%
+  arrange(value,X,Z)
 
 ```
 
 Environmental values:
 ```{r}
-ggplot(transect,aes(x=x,y=z,col=value))+
+transect%>%
+  filter(var%in%c("gcs_10","gcs_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
   facet_wrap(~var)+
   xlab("Distance along transect (m)")+
-  ylab("Height")+
+  ylab("Value")+
+  coord_equal()
+
+transect%>%
+  filter(var%in%c("hole_10","hole_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
+  geom_point(size=.7)+
+  scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
+  facet_wrap(~var)+
+  xlab("Distance along transect (m)")+
+  ylab("Value")+
+  coord_equal()
+
+transect%>%
+  filter(var%in%c("rough_10","rough_5"))%>%
+  ggplot(aes(x=X,y=Z,col=value))+
+  geom_point(size=.7)+
+  scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
+  facet_wrap(~var)+
+  xlab("Distance along transect (m)")+
+  ylab("Value")+
   coord_equal()
 ```
 
 Predicted habitat suitability.  Note some (but not all) little holes full of red.
 ```{r}
-ggplot(transect,aes(x=x,y=z,col=p1))+
-  geom_point(size=.7)+
-  scale_color_gradientn(colors=c("blue","grey","red"),name="Habitat\nSuitability")+
+ggplot(transect,aes(x=X,y=Z,col=pred))+
+  geom_point(size=.3)+
+  scale_color_gradientn(colors=c("blue","blue","blue","red"),name="Habitat\nSuitability",trans="log10")+
   xlab("Distance along transect (m)")+
   ylab("Height")+
   coord_equal()
@@ -233,8 +294,8 @@ An added bonus is that this transect kind of looks like a buffalo (head with hor
 
 Export the data (with predictions) in a format that can be opened by cloud compare.
 
-```{r}
-write.csv(cbind.data.frame(fitdata,p1),"data/modeloutput.txt")
+```{r, eval=F}
+write.csv(cbind.data.frame(d,pred=p1$pred),"data/modeloutput.txt")
 ```
 
 ## Render this document to markdown
