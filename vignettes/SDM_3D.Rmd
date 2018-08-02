@@ -7,25 +7,24 @@ output: github_document
 
 Load packages, etc.
 
-```{r setup, include=F}
-knitr::opts_knit$set(self.contained=T)
+```{r setup, include=T}
+knitr::opts_knit$set(self.contained=T, root.dir="..")
 knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
 ```
+
 
 ```{r libraries, warning=FALSE,message=FALSE, cache=F}
 options(java.parameters = "-Xmx2048m")
 library(rJava)
 
 library(rgdal)
-library(sf,quietly = T)
-library(sf,quietly = T)
+library(sf)
 library(dismo)
 library(ENMeval)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(knitr)
-library(scatterplot3d) 
+library(scatterplot3d)
 library(threejs)
 
 library(rgl)
@@ -48,15 +47,27 @@ load("data/model.Rdata")
 d$taxa[is.na(d$taxa)]="NULL"
 d=na.omit(d)
 
-kable(head(d))
+knitr::kable(head(d))
 ```
+
+### Data Description
+
+An incomplete description of columns in this dataset.
+
+* `dist`: distance to the smoother surface but without a sign - so hills and holes are both positive
+* `hole`: `dist`x`sign` so holes are negative and hills positive.
+* `gc`: unsigned gaussian curvature with specified radius
+* `gcs`: signed gaussian curvature (the sign was created from the dist metric)
+
+See Data_Processing.Rmd for the code.
 
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
-dl=d%>%sample_frac(.25)%>%
+dl=d%>%
+  sample_frac(.25)%>%  # reduce data size to make plotting faster - don't do this for the 'real' analysis
   select(-Bf,-Gf,-Rf)%>% # remove a few variables we won't need in this dataset
   gather(key=var,value = val,-X,-Y,-Z,-id, -taxa,-pres)%>%
-  mutate(presence=factor(pres,labels=c("Background","Octocoral Presence")))
+  mutate(presence=factor(pres,labels=c("Background","Octocoral\nPresence")))
 ```
 
 # Exploratory Data Analysis
@@ -65,12 +76,12 @@ Plot the distribution of environmental variables.
 
 ## Density plot
 
-```{r densityplot}
+```{r densityplot, fig.height=20}
 
 dl%>%
   ggplot(aes(val,col=presence))+
   geom_density(aes(y=..scaled..))+
-  facet_wrap(~var, scales="free")+
+  facet_wrap(~var, scales="free",ncol=3)+
   scale_color_manual(values = c("black","red"),name="")+
   ylab("Scaled Density")+
   xlab("Environmental Variable")
@@ -88,7 +99,7 @@ dl%>%
 ```
 ## Correlation matrix
 
-Correlation between the variables. Surprisingly even the two "rough" variables are very different.  
+Correlation between the variables. Surprisingly even the two "rough" variables are very different.
 ```{r, warning=F}
 my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
   ggplot(data = data, mapping = mapping) +
@@ -105,7 +116,7 @@ d%>%
 
 ## Substrate Type
 
-```{r, warning=F}
+```{r plotSubstrate, warning=F}
 d%>%
   ggplot(aes(x=as.factor(class),group=as.factor(pres),fill=as.factor(pres)))+
   stat_count(aes(y=..prop..), position='dodge')+
@@ -117,7 +128,7 @@ d%>%
 
 ## 3D Plot
 
-Plot of the new 'hole' metric. 
+Plot of the new 'hole' metric.
 
 ```{r,as.is=T, cache=F}
 scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi = 0)
@@ -134,7 +145,7 @@ scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi =
 
 Create a subsetted, non-spatial table to use for model fitting and scale the variables.
 
-```{r}
+```{r preparefitdata}
 nbg=10000  # number of background points to select
 
 subset_id=c(d$id[d$pres==1], # keep all presences
@@ -215,14 +226,15 @@ p1=d%>%
 3D plot of relative habitat suitability.  Areas in red are more suitable.
 
 ```{r}
-nColors <- 64
-cols <- as.character(cut(p1,breaks=nColors,labels= rainbow(nColors)))
+#nColors <- 10
+#cols <- as.character(cut(p1$pred,breaks=nColors,labels= rainbow(nColors)))
 
-scatter3D(fitdata$X, fitdata$Y, fitdata$Z,colvar = p1,bty = "g", cex=.01,theta = 100, phi = 0)
+scatter3D(d$X, d$Y, d$Z,colvar = log(p1$pred+1),
+          bty = "g", cex=.01,theta = 100, phi = 0)
 
 ```
 
-Interactive 3D Figure of Habitat Suitability (same as above using different plotting function).
+Interactive 3D Figure of Habitat Suitability (same as above using different plotting function).  This will only work when you re-run it locally - not on github.
 
 ```{r,as.is=T, cache=F, eval=F}
 scatterplot3js(fitdata$x,fitdata$y,fitdata$z, color=cols,size = 0.05,stroke = NULL,pch=".")
@@ -230,7 +242,7 @@ scatterplot3js(fitdata$x,fitdata$y,fitdata$z, color=cols,size = 0.05,stroke = NU
 
 ## Transect
 
-Show values along a transect.  
+Show values along a transect.
 
 Extract a transect (I selected the y values using cloud compare).  This really shows the value of doing this in 3D - it can easily capture really complex terrain including caves, etc.
 
@@ -241,8 +253,7 @@ transect=
   filter(between(Y,-0.027,-0.0265))%>%
   mutate(gcs_5=sign(gcs_5)*log(abs(gcs_5)),gcs_10=sign(gcs_10)*log(abs(gcs_10)))%>%
   gather("var","value",-X,-Y,-Z,-pres,-class,-pred,-taxa,-id)%>%
-  arrange(value,X,Z)
-
+  arrange(pred,X,Z)
 ```
 
 Environmental values:
@@ -252,7 +263,7 @@ transect%>%
   ggplot(aes(x=X,y=Z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
-  facet_wrap(~var)+
+  facet_wrap(~var,ncol=1)+
   xlab("Distance along transect (m)")+
   ylab("Value")+
   coord_equal()
@@ -262,7 +273,7 @@ transect%>%
   ggplot(aes(x=X,y=Z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
-  facet_wrap(~var)+
+  facet_wrap(~var,ncol=1)+
   xlab("Distance along transect (m)")+
   ylab("Value")+
   coord_equal()
@@ -272,7 +283,7 @@ transect%>%
   ggplot(aes(x=X,y=Z,col=value))+
   geom_point(size=.7)+
   scale_color_gradient2(low="blue",mid="grey",high="red",name="Variable\nValue")+
-  facet_wrap(~var)+
+  facet_wrap(~var,ncol=1)+
   xlab("Distance along transect (m)")+
   ylab("Value")+
   coord_equal()
@@ -282,7 +293,8 @@ Predicted habitat suitability.  Note some (but not all) little holes full of red
 ```{r}
 ggplot(transect,aes(x=X,y=Z,col=pred))+
   geom_point(size=.3)+
-  scale_color_gradientn(colors=c("blue","blue","blue","red"),name="Habitat\nSuitability",trans="log10")+
+  scale_color_gradientn(colors=c("blue","yellow","red"),
+                        name="Habitat\nSuitability",trans="log1p")+
   xlab("Distance along transect (m)")+
   ylab("Height")+
   coord_equal()
