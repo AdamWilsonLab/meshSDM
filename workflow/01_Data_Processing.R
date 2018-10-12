@@ -1,13 +1,8 @@
----
-title: "Data Processing"
-output: html_document
-editor_options: 
-  chunk_output_type: console
----
-
-```{r}
+## Libraries
 library(units)
 library(tidyverse)
+library(foreach)
+library(doParallel)
 
 if(system("hostname",intern = T)=="srv-u10-26.cbls.ccr.buffalo.edu"){
   library(hpc)
@@ -20,7 +15,7 @@ if(system("hostname",intern = T)=="srv-u10-26.cbls.ccr.buffalo.edu"){
   library(sf)
 }
 
-else {
+if(system("hostname",intern = T)!="srv-u10-26.cbls.ccr.buffalo.edu") {
 library(rgdal)
 library(sf)
 library(raster)
@@ -30,64 +25,81 @@ library(raster)
 #devtools::install_github("AdamWilsonLab/PointCloudViewer")
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
-```
-
-
 # Overall Workflow
-
-Agisoft
-
-  * Import photos, build 3D model
-  * Classify points
-  * Identify recruits as polygons
-  * Export to txt file of points
-
-CloudCompare
-
-  * Subsample points or use mesh vertices?
-  * Edit -> Scalar Fields -> Export Coordinates to SF
-  * Compute a gaussian smooth (Edit->Scalar Fields -> Gaussian Filter) of each dimension (x, y, and z) using the desired neighborhood (0.01, 0.1, etc.) for EACH dimension and each 'scale' (e.g. 0.0025, 0.01, 0.1, etc.)
-  * Roughness
-  * Surface Density
-  * Compute Illumination (Plugins -> P.C.V.)
-  * Edit -> Normals -> convert to -> Dip Dip Direction (slope and aspect)
-  * Export to an ascii file and import into R.
-  
-R
-* Import to R
-* Compute the 3d angle from each point to 1) it's 'smoothed' point and 2) the normal vector for that point. 
-* Compute the distance from each point to it's smoothed surface in 3d space 
-* If the angle is greater than 90, make the distance negative (a "hole").  If less - it stays positive and is a 'hill'.      
+#
+# Agisoft
+#
+#   * Import photos, build 3D model
+#   * Classify points
+#   * Identify recruits as polygons
+#   * Export to txt file of points
+#
+# CloudCompare
+#
+#   * Subsample points or use mesh vertices?
+#   * Edit -> Scalar Fields -> Export Coordinates to SF
+#   * Compute a gaussian smooth (Edit->Scalar Fields -> Gaussian Filter) of each dimension (x, y, and z) using the desired neighborhood (0.01, 0.1, etc.) for EACH dimension and each 'scale' (e.g. 0.0025, 0.01, 0.1, etc.)
+#   * Roughness
+#   * Surface Density
+#   * Compute Illumination (Plugins -> P.C.V.)
+#   * Edit -> Normals -> convert to -> Dip Dip Direction (slope and aspect)
+#   * Export to an ascii file and import into R.
+#
+# R
+# * Import to R
+# * Compute the 3d angle from each point to 1) it's 'smoothed' point and 2) the normal vector for that point.
+# * Compute the distance from each point to it's smoothed surface in 3d space
+# * If the angle is greater than 90, make the distance negative (a "hole").  If less - it stays positive and is a 'hill'.
 
 
 # Cloud Compare Command line
 
-This section isn't working.
-```{r, eval=F}
+# ## define path to CloudCompare
+# cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
+# preamble="-AUTO_SAVE OFF -NO_TIMESTAMP -O "
+#
+# input="data/vertices_cropped.txt"
+# #processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
+# #processing="-COORD_TO_SF X -GAUSS 0.01"
+# processing=paste(c(" -COORD_TO_SF X",
+#              " -DENSITY 0.1 -TYPE VOLUME -DENSITY 10 -TYPE VOLUME",
+#              " -ROUGH 0.01 -CURV GAUSS 0.01 -CURV GAUSS 0.1 "),
+#              collapse=" ")
+#
+# export="-C_EXPORT_FMT ASC -SEP COMMA -EXT csv -ADD_HEADER -SAVE_CLOUDS"
+#
+# cmd=paste(cc,preamble,input,processing,export)
+# cmd
+#
+# system(cmd)
 
-## define path to CloudCompare
-cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
-preamble="-AUTO_SAVE OFF -NO_TIMESTAMP -O "
 
-input="data/vertices_cropped.txt"
-#processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
-#processing="-COORD_TO_SF X -GAUSS 0.01"
-processing=paste(c(" -COORD_TO_SF X",
-             " -DENSITY 0.1 -TYPE VOLUME -DENSITY 10 -TYPE VOLUME",
-             " -ROUGH 0.01 -CURV GAUSS 0.01 -CURV GAUSS 0.1 "),
-             collapse=" ")
+## Import data
 
-export="-C_EXPORT_FMT ASC -SEP COMMA -EXT csv -ADD_HEADER -SAVE_CLOUDS"
 
-cmd=paste(cc,preamble,input,processing,export)
-cmd
+files=data.frame(
+  path=list.files("data/20181012/",
+                   pattern=".*Cloud_.*txt",recursive = T))%>%
+  mutate(
+    fname=basename(as.character(path)),
+    quad=sub("_Cloud_.*","",sub("[.]txt","",fname)),
+    scale=sub("^.*_Cloud_","",sub("[.]txt","",fname))
+  )%>%
+  select(-fname)
 
-system(cmd)
-```
+library(reshape2)
+dcast(files,quad~path)
 
-# Import data from Cloud Compare
-```{r}
-d=read.csv("data/Vertices_cropped.txt")
+#  spread(scale,path)
+
+
+
+q=quads[1]
+
+qf=list.files(file.path("data/20181012/",q,paste0(q,"_DATA"),paste0(q,"_CC_ASCII")))
+q1=read_csv()
+
+
 #d_class=readLAS("data/EcT1_3r_RAW.las")
 #d_raw=read.csv("data/EcT1_3r_RAW-005-01.txt")[-1,] #the [-1,] drops the first row which has the number of points.
 
@@ -95,13 +107,10 @@ d=read.csv("data/Vertices_cropped.txt")
 #d$class=d_class@data$Classification
 
 head(d)
-```
 
 # Subset and rename data
+#Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis.
 
-Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis. 
-
-```{r}
 env=d%>%
   select(X=Coord..X,
          Y=Coord..Y,
@@ -128,18 +137,14 @@ env=d%>%
     mutate(
       pres=0,
       taxa=NA)
-```
 
 
 # Distance to Smooth
-```{r}
 env$dist_10=dist3D(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
 env$dist_5=dist3D(env$X,env$X_smooth_5,env$Y,env$Y_smooth_5,env$Z,env$Z_smooth_5)
-```
 
 
 # Angle to smooth
-```{r}
 env$angle_10=apply(env[,c("X","Y","Z",
                 "X_smooth_10",
                 "Y_smooth_10",
@@ -152,10 +157,7 @@ env$angle_5=apply(env[,c("X","Y","Z",
                 "Z_smooth_5",
                 "Nx","Ny","Nz")],1,angle3D)
 
-```
-
 # Correct Sign of hole
-```{r}
 env$sign_10=ifelse(env$angle_10<90,-1,1)
 env$hole_10=env$dist_10*env$sign_10
 env$gcs_10=env$gc_10*env$sign_10
@@ -164,11 +166,8 @@ env$sign_5=ifelse(env$angle_5<90,-1,1)
 env$hole_5=env$dist_5*env$sign_5
 env$gcs_5=env$gc_5*env$sign_5
 
-```
-
 ## Create spatial object
-Convert `env` from a data.frame to a spatial `sf` object to enable intersection with the recruits.
-```{r}
+# Convert `env` from a data.frame to a spatial `sf` object to enable intersection with the recruits.
 env=env%>%
   st_as_sf(coords=1:3)%>%
   st_set_crs(proj)
@@ -176,47 +175,36 @@ env=env%>%
 # add coordinates back to data
 env[,c("X","Y","Z")]=st_coordinates(env)
 
-```
-
 ## Merge with recruit data
-
-```{r}
 
 datadir="/Users/adamw/Documents/Work/advising/Angela/data/20180514_Data"
 
 # union points and polygons
-recruits1<-read_sf(datadir,"EcT1_3r_OcR_plg")%>% 
+recruits1<-read_sf(datadir,"EcT1_3r_OcR_plg")%>%
   st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
   st_set_crs(proj)%>%  # assign UTM projection
   st_cast("MULTIPOLYGON") # close all the rings to make complete polygons
 
-recruits2<-read_sf(datadir,"EcT1_3r_OcR_pnt")%>% 
+recruits2<-read_sf(datadir,"EcT1_3r_OcR_pnt")%>%
   st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
   st_set_crs(proj)%>%  # assign UTM projection
   st_buffer(0.001)%>%  # assign UTM projection
   st_cast("MULTIPOLYGON")%>% # close all the rings to make complete polygons
-  st_zm(drop=F,what="Z") # add empty Z dimension to merge with polygons 
+  st_zm(drop=F,what="Z") # add empty Z dimension to merge with polygons
 
 recruits=rbind(recruits1,recruits2)
 
-```
 
 
 # Merge points and polygons
-
-```{r}
 recruits_int=st_intersection(recruits,env)%>%
   mutate(pres=1)%>%
   rename(taxa=NAME)%>%
   group_by(FID,taxa)
 
-```
-
-
 # Summarize points within each recruit polygon.
+# The choice of summary metric is important and needs to be thought through.
 
-The choice of summary metric is important and needs to be thought through.  
-```{r}
 obs=recruits_int%>%
 #  st_set_geometry(NULL)%>% #remove geometry
   summarise_if(is.numeric,median)%>%
@@ -230,13 +218,9 @@ d=bind_rows(
 
 # add an 'id' column to uniquely identify each point.
 d$id=1:nrow(d)
-```
 
 # Save Data
 
-```{r}
 save(d,file="data/model.Rdata")
 write.csv(d,file="data/model_data.csv")
-
-```
 
