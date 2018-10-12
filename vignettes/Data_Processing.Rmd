@@ -34,6 +34,7 @@ CloudCompare
   * Edit -> Scalar Fields -> Export Coordinates to SF
   * Compute a gaussian smooth (Edit->Scalar Fields -> Gaussian Filter) of each dimension (x, y, and z) using the desired neighborhood (0.01, 0.1, etc.) for EACH dimension and each 'scale' (e.g. 0.0025, 0.01, 0.1, etc.)
   * Roughness
+  * Surface Density
   * Compute Illumination (Plugins -> P.C.V.)
   * Edit -> Normals -> convert to -> Dip Dip Direction (slope and aspect)
   * Export to an ascii file and import into R.
@@ -54,10 +55,15 @@ This section isn't working.
 cc="/Applications/CloudCompare.app/Contents/MacOS/CloudCompare"
 preamble="-AUTO_SAVE OFF -NO_TIMESTAMP -O "
 
-input="data/vertices.txt"
+input="data/vertices_cropped.txt"
 #processing=" -COORD_TO_SF X -CURV GAUSS 0.01 -CURV GAUSS 0.1 "
-processing="-COORD_TO_SF X -GAUSS 0.01"
-export="-C_EXPORT_FMT ASC -ADD_HEADER -ADD_PTS_COUNT -SAVE_CLOUDS"
+#processing="-COORD_TO_SF X -GAUSS 0.01"
+processing=paste(c(" -COORD_TO_SF X",
+             " -DENSITY 0.1 -TYPE VOLUME -DENSITY 10 -TYPE VOLUME",
+             " -ROUGH 0.01 -CURV GAUSS 0.01 -CURV GAUSS 0.1 "),
+             collapse=" ")
+
+export="-C_EXPORT_FMT ASC -SEP COMMA -EXT csv -ADD_HEADER -SAVE_CLOUDS"
 
 cmd=paste(cc,preamble,input,processing,export)
 cmd
@@ -67,14 +73,14 @@ system(cmd)
 
 # Import data from Cloud Compare
 ```{r}
-#d=read.csv("data/Vertices.txt")
+d=read.csv("data/vertices_cropped.txt")
 #d_class=readLAS("data/EcT1_3r_RAW.las")
-d_raw=read.csv("data/EcT1_3r_RAW-005-01.txt")[-1,] #the [-1,] drops the first row which has the number of points.
+#d_raw=read.csv("data/EcT1_3r_RAW-005-01.txt")[-1,] #the [-1,] drops the first row which has the number of points.
 
 # take the classification from the las file and add it to the dataset.
 #d$class=d_class@data$Classification
 
-
+head(d)
 ```
 
 # Subset and rename data
@@ -82,7 +88,7 @@ d_raw=read.csv("data/EcT1_3r_RAW-005-01.txt")[-1,] #the [-1,] drops the first ro
 Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis. 
 
 ```{r}
-env=d_raw%>%
+env=d%>%
   select(X=Coord..X,
          Y=Coord..Y,
          Z=Coord..Z,
