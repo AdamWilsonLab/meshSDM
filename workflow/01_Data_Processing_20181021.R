@@ -78,32 +78,31 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 ## Import data
 
 
-cfiles=data.frame(
-  path=list.files("data/20181022/",
-                   pattern=".*cloud_.*txt",recursive = T, full=T),
+files=data.frame(
+  path=list.files("data/20181012/",
+                   pattern=".*Cloud_.*txt",recursive = T, full=T),
   stringsAsFactors = F)%>%
   mutate(
     fname=basename(path),
-    quad=sub("_cloud_.*","",sub("[.]txt","",fname)),
-    scale=paste0("s_",sub("^.*_cloud_","",sub("[.]txt","",fname)))
+    quad=sub("_Cloud_.*","",sub("[.]txt","",fname)),
+    scale=paste0("s_",sub("^.*_Cloud_","",sub("[.]txt","",fname)))
   )%>%
   dplyr::select(-fname)%>%
   spread(scale, path)
 
 rfiles=data.frame(
-  rpath=list.files("data/20181022/",
-                  pattern=".*rec.*shp",recursive = T, full=T),
+  path=list.files("data/20181012/",
+                  pattern=".*[OcR|ScR].*shp",recursive = T, full=T),
   stringsAsFactors = F)%>%
   mutate(
-    fname=basename(rpath),
-    quad=sub("_rec.*$","",fname))%>%
-  dplyr::select(-fname)
+    fname=basename(path),
+    quad=sub("_ScR_.*$","",sub("_OcR_.*$","",fname)))
 
-files=left_join(cfiles,rfiles,by="quad")
+
 
 
 #foreach(i=1:nrow(files)) %dopar%{
-f=files[2,]
+f=files[4,]
 
 d=read_csv(f$s_005)%>%slice(-1)
 
@@ -127,19 +126,14 @@ env=d%>%
          Z_smooth_5="Coord. Z.smooth(0.005)",
          rough_5="Roughness(0.005)",
          aspect="Dip direction (degrees)",
-         density="Volume density (r=0.005)",
+         density="Surface density (r=0.005)",
          slope="Dip (degrees)")%>%
     mutate(
-      pres=case_when(
-        classn %in%c(9,11) ~  1,
-        TRUE ~  0),
-      taxa=case_when(
-        classn ==  9   ~ "ocr",
-        classn ==  11 ~ "scr",
-        TRUE                  ~  "env"),
+      pres=0,
+      taxa=NA,
       class=case_when(
-        classn ==  9   ~ "ocr",
-        classn ==  11 ~ "scr",
+        classn ==  9   ~ "OcR_Recruit",
+        classn ==  11 ~ "ScR_Recruit",
         TRUE                  ~  "other"
       ))
 
@@ -184,70 +178,115 @@ env[,c("X","Y","Z")]=st_coordinates(env)
 ## Merge with recruit data
 
 # union points and polygons
-
-rec<-read_sf(f$rpath)%>%
+datadir="data/20181012//EC_T2_4R/EC_T2_4R_CL_DATA/EC_T2_4R_RECRUITS/"
+OcR_plg<-read_sf(datadir,"EcT2_4r_OcR_plg")%>%
   st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
   st_set_crs(proj)%>%  # assign UTM projection
-  separate(NAME,into=c("taxa","id"),sep="_")%>%
-  mutate(genus=gsub("[0-9]","",id),
-         nid=as.numeric(gsub("[a-z]","",id)))
+  st_cast("MULTIPOLYGON") # close all the rings to make complete polygons
 
-if(F){
+OcR_pnt<-read_sf(datadir,"EcT2_4r_OcR_pnt")%>%
+  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+  st_set_crs(proj)%>%  # assign UTM projection
+  st_buffer(0.001)%>%  # assign UTM projection
+  st_cast("MULTIPOLYGON")%>% # close all the rings to make complete polygons
+  st_zm(drop=F,what="Z") # add empty Z dimension to merge with polygons
+
+ScR_plg<-read_sf(datadir,"EcT2_4r_ScR_plg")%>%
+  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+  st_set_crs(proj)%>%  # assign UTM projection
+  st_cast("MULTIPOLYGON") # close all the rings to make complete polygons
+
+ScR_pnt<-read_sf(datadir,"EcT2_4r_ScR_pnt")%>%
+  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+  st_set_crs(proj)%>%  # assign UTM projection
+  st_buffer(0.001)%>%  # assign UTM projection
+  st_cast("MULTIPOLYGON")%>% # close all the rings to make complete polygons
+  st_zm(drop=F,what="Z") # add empty Z dimension to merge with polygons
+
+OcR=rbind(OcR_plg,OcR_pnt)%>%mutate(FID=1:n())
+ScR=rbind(ScR_plg,ScR_pnt)%>%mutate(FID=1:n())
+
+rec=rbind(ScR,OcR)%>%
+  rename(taxa=LAYER,genus=NAME)%>%
+  mutate(FID=1:n())%>%
+  st_buffer(0)
+
+
 ggplot(rec,aes(color=taxa,fill=genus))+
   geom_sf()
-ggplot(rec,aes(color=id))+
-  geom_sf()
-}
+
 # Merge points and polygons
-#rec_int=st_intersection(rec,env)%>%
-#  mutate(pres=1)%>%
-#  group_by(FID)
+rec_int=st_intersection(rec,env)%>%
+  mutate(pres=1)%>%
+  group_by(FID)
 
 
 #
-env_rec=env%>%filter(class%in%c("ocr","scr"))
+class_OcR=env%>%filter(class=="OcR_Recruit")
+#plot(class_OcR[1])
 
-# link markers with dense point cloud
-tid=st_distance(env_rec,rec)%>%
-  apply(1,which.min)
-env_rec$rec=rec$id[tid]
-env_rec$genus=rec$genus[tid]
-env_rec$nid=rec$nid[tid]
-env_rec$taxa=rec$taxa[tid]
 
 ## Explore point 3d distances to link classified points to vector point
-#st_bbox3d(env_rec)
-#st_bboxbuffer3d(class_OcR,5)
-#st_crop()
-#dist=st_distance(class_OcR,env)
+st_bbox3d(class_OcR)
+st_bboxbuffer3d(class_OcR,5)
+st_crop()
+dist=st_distance(class_OcR,env)
 
 
-box_buf=0.01 # bounding box around each recruit's cloud
+tid=st_distance(OcR,class_OcR)%>%
+  apply(2,which.min)
+class_OcR$rec=OcR$FID[tid]
+class_OcR=class_OcR%>%
+  mutate(taxa="OcR")
 
-env_rec_m=env_rec%>%
+class_ScR=env%>%filter(class=="ScR_Recruit")
+tid2=st_distance(ScR,class_ScR)%>%
+  apply(2,which.min)
+class_ScR$rec=ScR$FID[tid2]
+class_ScR=class_ScR%>%
+  mutate(taxa="ScR")
+
+
+box_buf=0.005
+rec_pts=rbind(class_OcR, class_ScR)%>%
   group_by(rec,taxa)%>%
-  summarize(m = mean(X))
+  summarize(xmin=min(X),xmax=max(X),ymin=min(Y),ymax=max(Y),zmin=min(Z),zmax=max(Z))%>%
+  st_bboxbuffer3d(dist=box_buf)
 
-x=env_rec_m[1,]
-y=env
+## Add distanace to points instead of alpha hull
 
-env_rec_m2=env_rec_m%>%
-  group_by(rec,taxa)%>%
-  do(pts=donut_3d(.,env,dist=0.005,boxdist = box_buf,fun=median))
+env_pts=foreach(1:nrow(rec_pts),.combine=rbind) %dopar%{
+  bbox=rec_pts[i,]
+  td=filter(env,
+            !class%in%c("ScR_Recruit","OcR_Recruit"),
+            between(X,bbox$xmin2,bbox$xmax2),
+            between(Y,bbox$ymin2,bbox$ymax2),
+            between(Z,bbox$zmin2,bbox$zmax2))
+  td2=st_distance(rec_pts[i,],td)%>%
+    apply(2,which.min)
 
-## Add taxa, genus, etc. to table above.
+  #td2=td%>%summarise_if(is.numeric,median)%>%
+  #  st_cast("POINT",do_split=F)%>%
+  #  dplyr::select(-FID)
+}
 
-
-ggplot(env_rec,aes(col=as.factor(taxa)))+
-#  geom_rect(aes(xmin=xmin2, xmax=xmax2, ymin=ymin2, ymax=ymax2))+
+ggplot(rec_pts,aes(col=as.factor(taxa)))+
+  geom_rect(aes(xmin=xmin2, xmax=xmax2, ymin=ymin2, ymax=ymax2))+
   geom_sf()+
-  geom_sf(data=rec,inherit.aes = F)#+
-#  geom_rect(aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax))
+  geom_sf(data=ScR,inherit.aes = F,col="red")+
+  geom_sf(data=OcR,inherit.aes = F,col="red")+
+  geom_rect(aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax))
 
+
+foreach(1:nrow())
 
 # Summarize points within each recruit polygon.
 # The choice of summary metric is important and needs to be thought through.
 
+obs=rec_int%>%
+  summarise_if(is.numeric,median)%>%
+  st_cast("POINT",do_split=F)%>%
+  dplyr::select(-FID)
 
  d=bind_rows(
    st_set_geometry(obs,NULL),
