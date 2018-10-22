@@ -1,5 +1,5 @@
-
-
+library(devtools)
+install_github("AdamWilsonLab/CoralSDM")
 
 TODO:
 
