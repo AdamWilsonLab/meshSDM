@@ -18,6 +18,7 @@ if(system("hostname",intern = T)!="srv-u10-26.cbls.ccr.buffalo.edu") {
 library(rgdal)
 library(sf)
 library(raster)
+devtools::load_all(".")  # load the CoralSDM package
 }
 #library(lidR)
 
@@ -105,13 +106,15 @@ files=left_join(cfiles,rfiles,by="quad")
 #foreach(i=1:nrow(files)) %dopar%{
 f=files[2,]
 
-d=read_csv(f$s_005)%>%slice(-1)
+d005=read_csv(f$s_005)%>%slice(-1)
+d01=read_csv(f$s_01)%>%slice(-1)
+d02=read_csv(f$s_02)%>%slice(-1)
 
 # Subset and rename data
 #Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis.
 
-env=d%>%
-  dplyr::select(X="//X",
+env=cbind(
+    dplyr::select(d005,X="//X",
          Y=Y,
          Z=Z,
          Rf=Rf,
@@ -126,9 +129,23 @@ env=d%>%
          Y_smooth_5="Coord. Y.smooth(0.005)",
          Z_smooth_5="Coord. Z.smooth(0.005)",
          rough_5="Roughness(0.005)",
-         aspect="Dip direction (degrees)",
-         density="Volume density (r=0.005)",
-         slope="Dip (degrees)")%>%
+         aspect_5="Dip direction (degrees)",
+         density_5="Volume density (r=0.005)",
+         slope_5="Dip (degrees)"),
+    dplyr::select(d01,
+                  gc_10="Gaussian curvature (0.01)",
+                  X_smooth_10="Coord. X.smooth(0.01)",
+                  Y_smooth_10="Coord. Y.smooth(0.01)",
+                  Z_smooth_10="Coord. Z.smooth(0.01)",
+                  rough_10="Roughness(0.01)",
+                  density_10="Volume density (r=0.01)"),
+    dplyr::select(d02,
+                  gc_20="Gaussian curvature (0.02)",
+                  X_smooth_20="Coord. X.smooth(0.02)",
+                  Y_smooth_20="Coord. Y.smooth(0.02)",
+                  Z_smooth_20="Coord. Z.smooth(0.02)",
+                  rough_20="Roughness(0.02)",
+                  density_20="Volume density (r=0.02)"))%>%
     mutate(
       pres=case_when(
         classn %in%c(9,11) ~  1,
@@ -146,16 +163,23 @@ env=d%>%
 #  Reclass Classificaiton to factor with labels.
 
 # Distance to Smooth
-#env$dist_10=dist3D(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
 env$dist_5=dist3D(env$X,env$X_smooth_5,env$Y,env$Y_smooth_5,env$Z,env$Z_smooth_5)
+env$dist_10=dist3D(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
+env$dist_20=dist3D(env$X,env$X_smooth_20,env$Y,env$Y_smooth_20,env$Z,env$Z_smooth_20)
 
 
 # Angle to smooth
-# env$angle_10=apply(env[,c("X","Y","Z",
-#                 "X_smooth_10",
-#                 "Y_smooth_10",
-#                 "Z_smooth_10",
-#                 "Nx","Ny","Nz")],1,angle3D)
+env$angle_20=apply(env[,c("X","Y","Z",
+                          "X_smooth_20",
+                          "Y_smooth_20",
+                          "Z_smooth_20",
+                          "Nx","Ny","Nz")],1,angle3D)
+
+env$angle_10=apply(env[,c("X","Y","Z",
+                 "X_smooth_10",
+                 "Y_smooth_10",
+                 "Z_smooth_10",
+                 "Nx","Ny","Nz")],1,angle3D)
 
 env$angle_5=apply(env[,c("X","Y","Z",
                 "X_smooth_5",
@@ -164,9 +188,13 @@ env$angle_5=apply(env[,c("X","Y","Z",
                 "Nx","Ny","Nz")],1,angle3D)
 
 # Correct Sign of hole
-#env$sign_10=ifelse(env$angle_10<90,-1,1)
-#env$hole_10=env$dist_10*env$sign_10
-#env$gcs_10=env$gc_10*env$sign_10
+env$sign_20=ifelse(env$angle_20<90,-1,1)
+env$hole_20=env$dist_20*env$sign_10
+env$gcs_20=env$gc_20*env$sign_10
+
+env$sign_10=ifelse(env$angle_10<90,-1,1)
+env$hole_10=env$dist_10*env$sign_10
+env$gcs_10=env$gc_10*env$sign_10
 
 env$sign_5=ifelse(env$angle_5<90,-1,1)
 env$hole_5=env$dist_5*env$sign_5
@@ -181,6 +209,12 @@ env=env%>%
 # add coordinates back to data
 env[,c("X","Y","Z")]=st_coordinates(env)
 
+## Save point cloud object
+
+save(env,file=file.path("data",paste0(f$quad,".Rdata")))
+
+
+##########################################
 ## Merge with recruit data
 
 # union points and polygons
@@ -208,6 +242,7 @@ ggplot(rec,aes(color=id))+
 env_rec=env%>%filter(class%in%c("ocr","scr"))
 
 # link markers with dense point cloud
+# replace with st_nearest_feature?
 tid=st_distance(env_rec,rec)%>%
   apply(1,which.min)
 env_rec$rec=rec$id[tid]
@@ -215,28 +250,29 @@ env_rec$genus=rec$genus[tid]
 env_rec$nid=rec$nid[tid]
 env_rec$taxa=rec$taxa[tid]
 
-## Explore point 3d distances to link classified points to vector point
-#st_bbox3d(env_rec)
-#st_bboxbuffer3d(class_OcR,5)
-#st_crop()
-#dist=st_distance(class_OcR,env)
+box_buf=0.01 # bounding box around each recruit's cloud to potentially include in torus
 
 
-box_buf=0.01 # bounding box around each recruit's cloud
+if(F){
+  library(rgl)
+  ## Extract and explore tori
+  obs_torus=env_rec%>%
+    group_by(rec,taxa, class)%>%
+    summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
+    group_by(rec,taxa,class, r_n, r_z, r_area)%>%
+    do(torus(.,env,dist=0.005,boxdist = box_buf))
 
-env_rec_m=env_rec%>%
-  group_by(rec,taxa)%>%
-  summarize(m = mean(X))
+    obs_torus$col=factor(obs_torus$type,labels=c("black","red","green"))
+    table(obs_torus$rec)
+    td=obs_torus#filter(obs_torus,rec=="agar2")
+    points3d(as.matrix(td[,c("X","Y","Z")]),color=as.character(td$col))#,col=dist)
+  }
 
-x=env_rec_m[1,]
-y=env
-
-env_rec_m2=env_rec_m%>%
-  group_by(rec,taxa)%>%
-  do(pts=donut_3d(.,env,dist=0.005,boxdist = box_buf,fun=median))
-
-## Add taxa, genus, etc. to table above.
-
+obs=env_rec%>%
+  group_by(rec,taxa, class)%>%
+  summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
+  group_by(rec,taxa,class, r_n, r_z, r_area)%>%
+  do(torus(.,env,dist=0.005,boxdist = box_buf,fun=median)) # Summarize env in the torus
 
 ggplot(env_rec,aes(col=as.factor(taxa)))+
 #  geom_rect(aes(xmin=xmin2, xmax=xmax2, ymin=ymin2, ymax=ymax2))+
@@ -245,16 +281,12 @@ ggplot(env_rec,aes(col=as.factor(taxa)))+
 #  geom_rect(aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax))
 
 
-# Summarize points within each recruit polygon.
-# The choice of summary metric is important and needs to be thought through.
-
-
  d=bind_rows(
    st_set_geometry(obs,NULL),
    st_set_geometry(env,NULL)
  )
 
-#d=bind_rows(obs,env)
+d=bind_rows(obs,env)
 
 
 
