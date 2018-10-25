@@ -8,14 +8,14 @@ torus <- function(x, y, dist, boxdist, fun=NULL){
             between(X,tbbox[["xmin"]],tbbox[["xmax"]]),
             between(Y,tbbox[["ymin"]],tbbox[["ymax"]]),
             between(Z,tbbox[["zmin"]],tbbox[["zmax"]]))
-  yb2=filter(yb1,pres==0)
-
+  yb2=filter(yb1,class!=x$class[1])
   yb2$dist=as.numeric(st_distance(x,yb2)[,])<=dist  #identify the torus
   yb3=filter(yb2,dist)  #keep only the torus
 
 if(is.null(fun))  {
   pts=rbind(
-  yb1%>%dplyr::filter(pres==1)%>%dplyr::select(X,Y,Z)%>%mutate(type="recruit"),
+  yb1%>%dplyr::filter(class==x$class[1])%>%
+    dplyr::select(X,Y,Z)%>%mutate(type="recruit"),
   yb2%>%dplyr::filter(!dist)%>%dplyr::select(X,Y,Z)%>%mutate(type="background"),
   yb3%>%dplyr::select(X,Y,Z)%>%mutate(type="torus"))%>%
   mutate(rec=x$rec,taxa=x$taxa,class=x$class)

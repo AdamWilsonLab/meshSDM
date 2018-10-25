@@ -43,9 +43,8 @@ library(plot3D)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-load("data/model.Rdata")
-d$taxa[is.na(d$taxa)]="NULL"
-d=na.omit(d)
+f="ect24r"
+load(file.path("data",paste0(f,".Rdata")))
 
 knitr::kable(head(d))
 ```
@@ -61,42 +60,41 @@ An incomplete description of columns in this dataset.
 
 See Data_Processing.Rmd for the code.
 
+
+
+
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
-dl=d%>%
-  sample_frac(.25)%>%  # reduce data size to make plotting faster - don't do this for the 'real' analysis
-  select(-Bf,-Gf,-Rf)%>% # remove a few variables we won't need in this dataset
-  gather(key=var,value = val,-X,-Y,-Z,-id, -taxa,-pres)%>%
-  mutate(presence=factor(pres,labels=c("Background","Octocoral\nPresence")))
+#frac=0.5 #sample only a fraction of the data
+
+d2=d%>%
+  ungroup()%>%
+   mutate(presence=as.factor(case_when(
+   pres & taxa=="scr" ~ "ScR Presence",
+   pres & taxa=="ocr" ~ "OcR Presence",
+   TRUE ~ "Background")))%>%
+#  mutate(keep=rbinom(nrow(d),1,frac), #sample
+#      keep=ifelse(pres==1,1,keep))%>%
+  dplyr::select(-Bf,-Gf,-Rf,-r_n,-r_z,-geometry,-pres,#-keep,
+                -contains("angle"),
+                -contains("sign"),
+                -contains("smooth"),
+                -contains("dist"),
+                -contains("aspect"),
+                -contains("gc_"),
+                -r_area,-Ny,-Nx,-Nz) # remove extras
+
+# Transform to 'long' format for easier ggplotting, etc.
+dl=d2%>%  gather(key=var,
+                 value = val,-X,-Y,-Z,-id,-taxa,-class,
+                 -classn,-rec,-presence,-contains("density"))%>%
+  separate(var,c("var","scale"),sep="_")
 ```
 
 # Exploratory Data Analysis
 
 Plot the distribution of environmental variables.
 
-## Density plot
-
-```{r densityplot, fig.height=20}
-
-dl%>%
-  ggplot(aes(val,col=presence))+
-  geom_density(aes(y=..scaled..))+
-  facet_wrap(~var, scales="free",ncol=3)+
-  scale_color_manual(values = c("black","red"),name="")+
-  ylab("Scaled Density")+
-  xlab("Environmental Variable")
-```
-
-## Boxplot comparing background with presences
-
-```{r, warning=F}
-dl%>%
-  ggplot(aes(x=presence,y=val))+
-  geom_boxplot()+
-  facet_wrap(~var, scales="free_y")+
-  xlab("Presence/Absence")+
-  ylab("Environmental Variable")
-```
 ## Correlation matrix
 
 Correlation between the variables. Surprisingly even the two "rough" variables are very different.
@@ -108,11 +106,25 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
 }
 
 d%>%
-  sample_n(100000)%>%
+  ungroup()%>%
+  sample_n(size=100000)%>%
   select(contains("rough"),contains("hole"),contains("gcs"))%>%
   ggpairs(lower = list(continuous = my_bin))
 ```
 
+
+## Violin plot comparing background with presences
+
+```{r, warning=F}
+dl%>%
+  ggplot(aes(x=presence,y=val))+
+  geom_violin()+
+  facet_grid(scale~var, scales="free_x")+
+  xlab("Presence/Absence")+
+  ylab("Environmental Variable")+
+  scale_y_log10()+
+  coord_flip()
+```
 
 ## Substrate Type
 

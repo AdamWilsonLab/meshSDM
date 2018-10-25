@@ -20,9 +20,7 @@ library(sf)
 library(raster)
 devtools::load_all(".")  # load the CoralSDM package
 }
-#library(lidR)
 
-#devtools::install_github("AdamWilsonLab/PointCloudViewer")
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 # Overall Workflow
@@ -114,9 +112,9 @@ d02=read_csv(f$s_02)%>%slice(-1)
 #Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis.
 
 env=cbind(
-    dplyr::select(d005,X="//X",
-         Y=Y,
-         Z=Z,
+    dplyr::select(d005,X="Coord. X",
+         Y="Coord. Y",
+         Z="Coord. Z",
          Rf=Rf,
          Gf=Gf,
          Bf=Bf,
@@ -129,7 +127,7 @@ env=cbind(
          Y_smooth_5="Coord. Y.smooth(0.005)",
          Z_smooth_5="Coord. Z.smooth(0.005)",
          rough_5="Roughness(0.005)",
-         aspect_5="Dip direction (degrees)",
+         #aspect_5="Dip direction (degrees)",
          density_5="Volume density (r=0.005)",
          slope_5="Dip (degrees)"),
     dplyr::select(d01,
@@ -138,18 +136,17 @@ env=cbind(
                   Y_smooth_10="Coord. Y.smooth(0.01)",
                   Z_smooth_10="Coord. Z.smooth(0.01)",
                   rough_10="Roughness(0.01)",
-                  density_10="Volume density (r=0.01)"),
+                  density_10="Volume density (r=0.01)",
+                  slope_10="Dip (degrees)"),
     dplyr::select(d02,
                   gc_20="Gaussian curvature (0.02)",
                   X_smooth_20="Coord. X.smooth(0.02)",
                   Y_smooth_20="Coord. Y.smooth(0.02)",
                   Z_smooth_20="Coord. Z.smooth(0.02)",
                   rough_20="Roughness(0.02)",
-                  density_20="Volume density (r=0.02)"))%>%
+                  density_20="Volume density (r=0.02)",
+                  slope_20="Dip (degrees)"))%>%
     mutate(
-      pres=case_when(
-        classn %in%c(9,11) ~  1,
-        TRUE ~  0),
       taxa=case_when(
         classn ==  9   ~ "ocr",
         classn ==  11 ~ "scr",
@@ -188,9 +185,10 @@ env$angle_5=apply(env[,c("X","Y","Z",
                 "Nx","Ny","Nz")],1,angle3D)
 
 # Correct Sign of hole
+# # Clean up with mutate
 env$sign_20=ifelse(env$angle_20<90,-1,1)
-env$hole_20=env$dist_20*env$sign_10
-env$gcs_20=env$gc_20*env$sign_10
+env$hole_20=env$dist_20*env$sign_20
+env$gcs_20=env$gc_20*env$sign_20
 
 env$sign_10=ifelse(env$angle_10<90,-1,1)
 env$hole_10=env$dist_10*env$sign_10
@@ -208,10 +206,6 @@ env=env%>%
 
 # add coordinates back to data
 env[,c("X","Y","Z")]=st_coordinates(env)
-
-## Save point cloud object
-
-save(env,file=file.path("data",paste0(f$quad,".Rdata")))
 
 
 ##########################################
@@ -272,21 +266,21 @@ obs=env_rec%>%
   group_by(rec,taxa, class)%>%
   summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
   group_by(rec,taxa,class, r_n, r_z, r_area)%>%
-  do(torus(.,env,dist=0.005,boxdist = box_buf,fun=median)) # Summarize env in the torus
+  do(torus(.,env,dist=0.005,boxdist = box_buf,fun=median))%>% # Summarize env in the torus
+  mutate(pres=1)
 
-ggplot(env_rec,aes(col=as.factor(taxa)))+
-#  geom_rect(aes(xmin=xmin2, xmax=xmax2, ymin=ymin2, ymax=ymax2))+
+if(F){
+ggplot(obs,aes(col=as.factor(taxa)))+
   geom_sf()+
   geom_sf(data=rec,inherit.aes = F)#+
-#  geom_rect(aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax))
+}
 
+# d=bind_rows(
+#   st_set_geometry(obs,NULL),
+#   st_set_geometry(env,NULL)
+# )
 
- d=bind_rows(
-   st_set_geometry(obs,NULL),
-   st_set_geometry(env,NULL)
- )
-
-d=bind_rows(obs,env)
+d=bind_rows(obs,mutate(env,pres=0))
 
 
 
@@ -295,10 +289,6 @@ d$id=1:nrow(d)
 
 # Save Data
 
-save(d,file="data/model_EC_T2_4R.Rdata")
-write.csv(d,file="data/model_EC_T2_4R.csv")
+save(d,file=file.path("data",paste0(f$quad,".Rdata")))
 
-
-ggplot(env,aes(x=slope,density))+
-  geom_hex()
 
