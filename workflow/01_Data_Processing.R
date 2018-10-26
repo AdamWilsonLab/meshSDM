@@ -184,7 +184,7 @@ env$angle_5=apply(env[,c("X","Y","Z",
                 "Z_smooth_5",
                 "Nx","Ny","Nz")],1,angle3D)
 
-# Correct Sign of hole
+c# Correct Sign of hole
 # # Clean up with mutate
 env$sign_20=ifelse(env$angle_20<90,-1,1)
 env$hole_20=env$dist_20*env$sign_20
@@ -201,7 +201,7 @@ env$gcs_5=env$gc_5*env$sign_5
 ## Create spatial object
 # Convert `env` from a data.frame to a spatial `sf` object to enable intersection with the recruits.
 env=env%>%
-  st_as_sf(coords=1:3)%>%
+  st_as_sf(coords=c("X","Y","Z"))%>%
   st_set_crs(proj)
 
 # add coordinates back to data
@@ -219,6 +219,9 @@ rec<-read_sf(f$rpath)%>%
   separate(NAME,into=c("taxa","id"),sep="_")%>%
   mutate(genus=gsub("[0-9]","",id),
          nid=as.numeric(gsub("[a-z]","",id)))
+
+crd = st_geometry(rec)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
+rec=st_set_geometry(rec,crd) %>%st_set_crs(proj) # reset geometry
 
 if(F){
 ggplot(rec,aes(color=taxa,fill=genus))+
@@ -262,6 +265,8 @@ if(F){
     points3d(as.matrix(td[,c("X","Y","Z")]),color=as.character(td$col))#,col=dist)
   }
 
+
+# Calculate summary of recruit habitat
 obs=env_rec%>%
   group_by(rec,taxa, class)%>%
   summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?

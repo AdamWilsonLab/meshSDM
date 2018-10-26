@@ -108,7 +108,7 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
 d%>%
   ungroup()%>%
   sample_n(size=100000)%>%
-  select(contains("rough"),contains("hole"),contains("gcs"))%>%
+  dplyr::select(contains("rough"),contains("hole"),contains("gcs"))%>%
   ggpairs(lower = list(continuous = my_bin))
 ```
 
