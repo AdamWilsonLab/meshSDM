@@ -295,5 +295,6 @@ d$id=1:nrow(d)
 # Save Data
 
 save(d,file=file.path("data",paste0(f$quad,".Rdata")))
+d%>%dplyr::select(-geometry)%>%write_csv(path=file.path("data",paste0(f$quad,".csv")))
 
 
