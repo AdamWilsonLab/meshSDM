@@ -1,26 +1,5 @@
-## Libraries
-library(tidyverse)
-library(foreach)
-library(doParallel)
-
-if(system("hostname",intern = T)=="srv-u10-26.cbls.ccr.buffalo.edu"){
-  library(hpc)
-  moduleInit()
-  module("load lmod/6.0.1 StdEnv intel/15.0 hdf5/1.8.15p1 netcdf python/anaconda R grass nco cdo")
-  dyn.load("/util/academic/libpng/1.6.17/lib/libpng16.so.16")
-  dyn.load("/util/academic/grass/proj.4-4.9.1/lib/libproj.so")
-  library(rgdal)
-  dyn.load("/util/academic/grass/gdal-2.2.0/lib/libgdal.so.20")
-  library(sf)
-}
-
-if(system("hostname",intern = T)!="srv-u10-26.cbls.ccr.buffalo.edu") {
-library(rgdal)
-library(sf)
-library(raster)
-devtools::load_all(".")  # load the CoralSDM package
-}
-
+source("workflow/00_setup.R")
+load("output/files.Rdata")
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 # Overall Workflow
@@ -73,36 +52,9 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 #
 # system(cmd)
 #
-#
-## Import data
 
-
-cfiles=data.frame(
-  path=list.files("data/20181022/",
-                   pattern=".*cloud_.*txt",recursive = T, full=T),
-  stringsAsFactors = F)%>%
-  mutate(
-    fname=basename(path),
-    quad=sub("_cloud_.*","",sub("[.]txt","",fname)),
-    scale=paste0("s_",sub("^.*_cloud_","",sub("[.]txt","",fname)))
-  )%>%
-  dplyr::select(-fname)%>%
-  spread(scale, path)
-
-rfiles=data.frame(
-  rpath=list.files("data/20181022/",
-                  pattern=".*rec.*shp",recursive = T, full=T),
-  stringsAsFactors = F)%>%
-  mutate(
-    fname=basename(rpath),
-    quad=sub("_rec.*$","",fname))%>%
-  dplyr::select(-fname)
-
-files=left_join(cfiles,rfiles,by="quad")
-
-
-#foreach(i=1:nrow(files)) %dopar%{
-f=files[2,]
+foreach(i=1:nrow(files)) %dopar%{
+f=files[i,]
 
 d005=read_csv(f$s_005)%>%slice(-1)
 d01=read_csv(f$s_01)%>%slice(-1)
@@ -127,7 +79,7 @@ env=cbind(
          Y_smooth_5="Coord. Y.smooth(0.005)",
          Z_smooth_5="Coord. Z.smooth(0.005)",
          rough_5="Roughness(0.005)",
-         #aspect_5="Dip direction (degrees)",
+         aspect_5="Dip direction (degrees)",
          density_5="Volume density (r=0.005)",
          slope_5="Dip (degrees)"),
     dplyr::select(d01,
@@ -136,8 +88,8 @@ env=cbind(
                   Y_smooth_10="Coord. Y.smooth(0.01)",
                   Z_smooth_10="Coord. Z.smooth(0.01)",
                   rough_10="Roughness(0.01)",
-                  density_10="Volume density (r=0.01)",
-                  slope_10="Dip (degrees)"),
+                  density_10="Volume density (r=0.01)"),#,
+#                  slope_10="Dip (degrees)"),
     dplyr::select(d02,
                   gc_20="Gaussian curvature (0.02)",
                   X_smooth_20="Coord. X.smooth(0.02)",
@@ -152,12 +104,19 @@ env=cbind(
         classn ==  11 ~ "scr",
         TRUE                  ~  "env"),
       class=case_when(
+        classn ==  2   ~ "ground",
+        classn ==  3   ~ "coral",
+        classn ==  4   ~ "octocoral",
+        classn ==  5   ~ "sponge",
+        classn ==  6   ~ "rock_igneous",
         classn ==  9   ~ "ocr",
         classn ==  11 ~ "scr",
-        TRUE                  ~  "other"
+        classn ==  15 ~ "rock",
+        classn ==  17 ~ "algae",
+        classn ==  18 ~ "sand",
+        TRUE          ~  "other"
       ))
 
-#  Reclass Classificaiton to factor with labels.
 
 # Distance to Smooth
 env$dist_5=dist3D(env$X,env$X_smooth_5,env$Y,env$Y_smooth_5,env$Z,env$Z_smooth_5)
@@ -184,7 +143,7 @@ env$angle_5=apply(env[,c("X","Y","Z",
                 "Z_smooth_5",
                 "Nx","Ny","Nz")],1,angle3D)
 
-c# Correct Sign of hole
+# Correct Sign of hole
 # # Clean up with mutate
 env$sign_20=ifelse(env$angle_20<90,-1,1)
 env$hole_20=env$dist_20*env$sign_20
@@ -213,15 +172,30 @@ env[,c("X","Y","Z")]=st_coordinates(env)
 
 # union points and polygons
 
-rec<-read_sf(f$rpath)%>%
-  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
-  st_set_crs(proj)%>%  # assign UTM projection
+#rec<-read_sf(f$rpath)%>%
+#  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
+#  st_set_crs(proj)%>%  # assign UTM projection
+#  separate(NAME,into=c("taxa","id"),sep="_")%>%
+#  mutate(genus=gsub("[0-9]","",id),
+#         nid=as.numeric(gsub("[a-z]","",id)))
+
+#crd = st_geometry(rec)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
+#rec=st_set_geometry(rec,crd) %>%st_set_crs(proj) # reset geometry
+
+rec1<-read_sf(f$rpath)
+crd <- st_geometry(rec1)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
+
+rec=rec1%>%
+  st_set_geometry(NULL)%>%
   separate(NAME,into=c("taxa","id"),sep="_")%>%
   mutate(genus=gsub("[0-9]","",id),
-         nid=as.numeric(gsub("[a-z]","",id)))
+         nid=as.numeric(gsub("[a-z]","",id)))%>%
+  st_set_geometry(crd) %>%
+  st_set_crs(proj) # reset geometry
 
-crd = st_geometry(rec)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
-rec=st_set_geometry(rec,crd) %>%st_set_crs(proj) # reset geometry
+
+
+
 
 if(F){
 ggplot(rec,aes(color=taxa,fill=genus))+
@@ -297,4 +271,4 @@ d$id=1:nrow(d)
 save(d,file=file.path("data",paste0(f$quad,".Rdata")))
 d%>%dplyr::select(-geometry)%>%write_csv(path=file.path("data",paste0(f$quad,".csv")))
 
-
+}
