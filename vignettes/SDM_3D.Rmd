@@ -1,6 +1,8 @@
 ---
 title: "3D SDM Example"
 output: github_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Setup
@@ -8,6 +10,7 @@ output: github_document
 Load packages, etc.
 
 ```{r setup, include=T}
+source("workflow/00_setup.R")
 knitr::opts_knit$set(self.contained=T, root.dir="..")
 knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
 ```
@@ -16,7 +19,8 @@ knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
 ```{r libraries, warning=FALSE,message=FALSE, cache=F}
 options(java.parameters = "-Xmx2048m")
 library(rJava)
-
+library(foreach)
+library(doParallel)
 library(rgdal)
 library(sf)
 library(dismo)
@@ -24,17 +28,9 @@ library(ENMeval)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(scatterplot3d)
-library(threejs)
 
-library(rgl)
 library(viridis)
 library(GGally)
-library(plot3D)
-
-# RGL options
-#options(rgl.useNULL = TRUE)
-#rgl::setupKnitr()
 
 ```
 
@@ -43,12 +39,9 @@ library(plot3D)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-f="ect24r"
-load(file.path("data",paste0(f,".Rdata")))
+load("data/multi_quad_sample.Rdata")
 
-knitr::kable(head(d))
 ```
-
 ### Data Description
 
 An incomplete description of columns in this dataset.
@@ -65,29 +58,13 @@ See Data_Processing.Rmd for the code.
 
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
-#frac=0.5 #sample only a fraction of the data
-
-d2=d%>%
-  ungroup()%>%
-   mutate(presence=as.factor(case_when(
-   pres & taxa=="scr" ~ "ScR Presence",
-   pres & taxa=="ocr" ~ "OcR Presence",
-   TRUE ~ "Background")))%>%
-#  mutate(keep=rbinom(nrow(d),1,frac), #sample
-#      keep=ifelse(pres==1,1,keep))%>%
-  dplyr::select(-Bf,-Gf,-Rf,-r_n,-r_z,-geometry,-pres,#-keep,
-                -contains("angle"),
-                -contains("sign"),
-                -contains("smooth"),
-                -contains("dist"),
-                -contains("aspect"),
-                -contains("gc_"),
-                -r_area,-Ny,-Nx,-Nz) # remove extras
 
 # Transform to 'long' format for easier ggplotting, etc.
-dl=d2%>%  gather(key=var,
+dl=d%>%
+  ungroup()%>%
+  gather(key=var,
                  value = val,-X,-Y,-Z,-id,-taxa,-class,
-                 -classn,-rec,-presence,-contains("density"))%>%
+                 -classn,-rec,-pres,-contains("density"))%>%
   separate(var,c("var","scale"),sep="_")
 ```
 
@@ -107,7 +84,6 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
 
 d%>%
   ungroup()%>%
-  sample_n(size=100000)%>%
   dplyr::select(contains("rough"),contains("hole"),contains("gcs"))%>%
   ggpairs(lower = list(continuous = my_bin))
 ```

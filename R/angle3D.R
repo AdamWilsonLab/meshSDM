@@ -10,9 +10,15 @@
 #' c[1],c[2],c[3]))
 
 
-dist3D <- function(x1, x2, y1, y2, z1, z2 ){
-  sqrt( (x2 - x1)^2 + (y2 - y1)^2 + (z2 - z1)^2 )
+#dist3D <- function(x1, x2, y1, y2, z1, z2 ){
+#  sqrt( (x2 - x1)^2 + (y2 - y1)^2 + (z2 - z1)^2 )
+#}
+# https://stackoverflow.com/questions/39671579/compute-euclidean-distance-matrix-from-x-y-z-coordinates
+fdist <- function(x1,x2,y1=NULL, y2=NULL, z1=NULL, z2=NULL){
+  if(is.null(y1)) return(sqrt(sum((x1-x2)^2)))
+  if(!is.null(y1)) return(sqrt( (x2 - x1)^2 + (y2 - y1)^2 + (z2 - z1)^2 ))
 }
+
 
 angle3D=function(x){
   # https://stackoverflow.com/questions/19729831/angle-between-3-points-in-3d-space

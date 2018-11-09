@@ -52,13 +52,31 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 #
 # system(cmd)
 #
+mcoptions <- list(preschedule=FALSE, set.seed=FALSE)
 
-foreach(i=1:nrow(files)) %dopar%{
+files=na.omit(files)
+
+foreach(i=1:nrow(files),
+        .inorder=F,
+        .errorhandling=c('pass'),
+        .options.multicore=mcoptions) %dopar% {
+
 f=files[i,]
 
-d005=read_csv(f$s_005)%>%slice(-1)
-d01=read_csv(f$s_01)%>%slice(-1)
-d02=read_csv(f$s_02)%>%slice(-1)
+outputfile_rdata=file.path("data",paste0(f$quad,".Rdata"))
+outputfile_csv=file.path("data",paste0(f$quad,".csv"))
+
+if(file.exists(outputfile_rdata)&file.exists(outputfile_csv)) {
+  message(paste("################# Files exist for quad: ",f$quad, "skipping to the next quad"))
+  return(paste(f$quad, "already completed"))
+}
+
+message(paste("################# Importing data for quad: ",f$quad))
+
+
+d005=read_csv(f$s_005,progress = F,col_types = cols())%>%slice(-1)
+d01=read_csv(f$s_01,progress = F,col_types = cols())%>%slice(-1)
+d02=read_csv(f$s_02,progress = F,col_types = cols())%>%slice(-1)
 
 # Subset and rename data
 #Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis.
@@ -118,10 +136,12 @@ env=cbind(
       ))
 
 
+message(paste("################# Calculating hole metrics for quad: ",f$quad))
+
 # Distance to Smooth
-env$dist_5=dist3D(env$X,env$X_smooth_5,env$Y,env$Y_smooth_5,env$Z,env$Z_smooth_5)
-env$dist_10=dist3D(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
-env$dist_20=dist3D(env$X,env$X_smooth_20,env$Y,env$Y_smooth_20,env$Z,env$Z_smooth_20)
+env$dist_5=fdist(env$X,env$X_smooth_5,env$Y,env$Y_smooth_5,env$Z,env$Z_smooth_5)
+env$dist_10=fdist(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
+env$dist_20=fdist(env$X,env$X_smooth_20,env$Y,env$Y_smooth_20,env$Z,env$Z_smooth_20)
 
 
 # Angle to smooth
@@ -169,6 +189,7 @@ env[,c("X","Y","Z")]=st_coordinates(env)
 
 ##########################################
 ## Merge with recruit data
+message(paste("################# Importing recruit data for quad: ",f$quad))
 
 # union points and polygons
 
@@ -221,9 +242,6 @@ env_rec$genus=rec$genus[tid]
 env_rec$nid=rec$nid[tid]
 env_rec$taxa=rec$taxa[tid]
 
-box_buf=0.01 # bounding box around each recruit's cloud to potentially include in torus
-
-
 if(F){
   library(rgl)
   ## Extract and explore tori
@@ -231,7 +249,7 @@ if(F){
     group_by(rec,taxa, class)%>%
     summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
     group_by(rec,taxa,class, r_n, r_z, r_area)%>%
-    do(torus(.,env,dist=0.005,boxdist = box_buf))
+    do(torus(.,env,dist=0.005))
 
     obs_torus$col=factor(obs_torus$type,labels=c("black","red","green"))
     table(obs_torus$rec)
@@ -241,11 +259,14 @@ if(F){
 
 
 # Calculate summary of recruit habitat
+message(paste("################# Calculating summaries for quad: ",f$quad))
+
+
 obs=env_rec%>%
   group_by(rec,taxa, class)%>%
   summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
   group_by(rec,taxa,class, r_n, r_z, r_area)%>%
-  do(torus(.,env,dist=0.005,boxdist = box_buf,fun=median))%>% # Summarize env in the torus
+  do(torus(.,env,dist=0.005,fun=median))%>% # Summarize env in the torus
   mutate(pres=1)
 
 if(F){
@@ -260,15 +281,22 @@ ggplot(obs,aes(col=as.factor(taxa)))+
 # )
 
 d=bind_rows(obs,mutate(env,pres=0))
+d$quad=f$quad  # add quad id to table
 
+d$class=as.factor(d$class)
+d$pres=as.logical(d$pres)
 
 
 # add an 'id' column to uniquely identify each point.
 d$id=1:nrow(d)
 
+################
 # Save Data
+message(paste("################# Saving data for quad: ",f$quad))
 
-save(d,file=file.path("data",paste0(f$quad,".Rdata")))
-d%>%dplyr::select(-geometry)%>%write_csv(path=file.path("data",paste0(f$quad,".csv")))
 
+save(d,file=outputfile_rdata)
+d%>%dplyr::select(-geometry)%>%write_csv(path=outputfile_csv)
+
+return(data.frame(quad=f$quad,npoints=nrow(d)))
 }
