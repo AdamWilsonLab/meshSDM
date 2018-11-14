@@ -1,5 +1,4 @@
 source("workflow/00_setup.R")
-load("output/files.Rdata")
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 # Overall Workflow
@@ -54,7 +53,11 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 #
 mcoptions <- list(preschedule=FALSE, set.seed=FALSE)
 
-files=na.omit(files)
+load("output/files.Rdata")
+
+files=files%>%
+  select(-s_5)%>%
+  na.omit(files)
 
 foreach(i=1:nrow(files),
         .inorder=F,
@@ -106,8 +109,8 @@ env=cbind(
                   Y_smooth_10="Coord. Y.smooth(0.01)",
                   Z_smooth_10="Coord. Z.smooth(0.01)",
                   rough_10="Roughness(0.01)",
-                  density_10="Volume density (r=0.01)"),#,
-#                  slope_10="Dip (degrees)"),
+                  density_10="Volume density (r=0.01)",
+                  slope_10="Dip (degrees)"),
     dplyr::select(d02,
                   gc_20="Gaussian curvature (0.02)",
                   X_smooth_20="Coord. X.smooth(0.02)",
@@ -186,25 +189,25 @@ env=env%>%
 # add coordinates back to data
 env[,c("X","Y","Z")]=st_coordinates(env)
 
+if(F) save(env,file="test.Rdata")  #temporary save for debugging.
 
 ##########################################
 ## Merge with recruit data
 message(paste("################# Importing recruit data for quad: ",f$quad))
 
 # union points and polygons
-
-#rec<-read_sf(f$rpath)%>%
-#  st_set_crs(NA)%>%  # needed due to strange prj of the shapefile
-#  st_set_crs(proj)%>%  # assign UTM projection
-#  separate(NAME,into=c("taxa","id"),sep="_")%>%
-#  mutate(genus=gsub("[0-9]","",id),
-#         nid=as.numeric(gsub("[a-z]","",id)))
-
-#crd = st_geometry(rec)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
-#rec=st_set_geometry(rec,crd) %>%st_set_crs(proj) # reset geometry
-
 rec1<-read_sf(f$rpath)
-crd <- st_geometry(rec1)+1  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
+
+#
+env_rec=env%>%filter(class%in%c("ocr","scr"))
+
+
+rec_bbox=st_bbox(rec1)
+rec_env=st_bbox(env_rec)
+
+shift=abs(round(rec_bbox-rec_env)[1:2])
+
+crd <- st_geometry(rec1)+shift  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
 
 rec=rec1%>%
   st_set_geometry(NULL)%>%
@@ -213,9 +216,6 @@ rec=rec1%>%
          nid=as.numeric(gsub("[a-z]","",id)))%>%
   st_set_geometry(crd) %>%
   st_set_crs(proj) # reset geometry
-
-
-
 
 
 if(F){
@@ -230,11 +230,12 @@ ggplot(rec,aes(color=id))+
 #  group_by(FID)
 
 
-#
-env_rec=env%>%filter(class%in%c("ocr","scr"))
 
 # link markers with dense point cloud
 # replace with st_nearest_feature?
+
+## Update below to use 3d fdist function.
+
 tid=st_distance(env_rec,rec)%>%
   apply(1,which.min)
 env_rec$rec=rec$id[tid]
@@ -285,6 +286,7 @@ d$quad=f$quad  # add quad id to table
 
 d$class=as.factor(d$class)
 d$pres=as.logical(d$pres)
+d$taxa=as.factor(d$taxa)
 
 
 # add an 'id' column to uniquely identify each point.
