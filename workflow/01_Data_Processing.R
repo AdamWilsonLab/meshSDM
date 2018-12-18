@@ -59,16 +59,22 @@ files=files%>%
   select(-s_5)%>%
   na.omit(files)
 
-foreach(i=1:nrow(files),
+foreach(i=1:nrow(files),  # parallel loop over quadrats
         .inorder=F,
         .errorhandling=c('pass'),
-        .options.multicore=mcoptions) %dopar% {
+        .options.multicore=mcoptions) %dopar% {  # start the loop
 
-f=files[i,]
+          if(F) i=1  # If you want to run through this line by line, set i equal to the quadrat you want to test.
 
+f=files[i,] # selects which quadrat is being processed in this iteration
+
+message(paste("################# Beginning processing for quad: ",f$quad, "skipping to the next quad"))
+
+# define output files to be created at the end of this loop
 outputfile_rdata=file.path("data",paste0(f$quad,".Rdata"))
 outputfile_csv=file.path("data",paste0(f$quad,".csv"))
 
+# check to see if the output files already exist and skip if already done.
 if(file.exists(outputfile_rdata)&file.exists(outputfile_csv)) {
   message(paste("################# Files exist for quad: ",f$quad, "skipping to the next quad"))
   return(paste(f$quad, "already completed"))
@@ -267,6 +273,7 @@ obs=env_rec%>%
   group_by(rec,taxa, class)%>%
   summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
   group_by(rec,taxa,class, r_n, r_z, r_area)%>%
+  # Add filter to remove adjacent recruits?????
   do(torus(.,env,dist=0.005,fun=median))%>% # Summarize env in the torus
   mutate(pres=1)
 

@@ -18,7 +18,8 @@ files=data.frame(
   mutate(file=basename(path),
          quad=sub("[.]Rdata","",file))
 
-d <-
+
+poolquad <-
   foreach(i=1:nrow(files),.combine=rbind.data.frame) %dopar% {
     f=files$path[i]
     d1 <- local({  # this weird thing loads the data for one quad and renames it as 'd'
@@ -47,4 +48,4 @@ d <-
   }
 
 
-save(d,file=paste("data/multi_quad_sample.Rdata"))
+save(poolquad,file=paste("data/model/multi_quad_sample.Rdata"))

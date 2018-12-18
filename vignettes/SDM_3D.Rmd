@@ -39,7 +39,7 @@ library(GGally)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-load("data/multi_quad_sample.Rdata")
+load("data/model/multi_quad_sample.Rdata")
 
 ```
 ### Data Description
@@ -60,7 +60,7 @@ Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
 
 # Transform to 'long' format for easier ggplotting, etc.
-dl=d%>%
+dl=poolquad%>%
   ungroup()%>%
   gather(key=var,
                  value = val,-X,-Y,-Z,-id,-taxa,-class,
