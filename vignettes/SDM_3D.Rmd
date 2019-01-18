@@ -31,7 +31,8 @@ library(tidyr)
 
 library(viridis)
 library(GGally)
-
+library(ggpubr)
+library(broom)
 ```
 
 ## Data Import
@@ -40,7 +41,11 @@ This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
 load("data/multi_quad_sample.Rdata")
-
+d=mutate(d,
+         taxa=case_when(
+           is.na(rec) ~ "env",
+           TRUE ~ taxa
+         ))
 ```
 ### Data Description
 
@@ -63,7 +68,7 @@ Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 dl=d%>%
   ungroup()%>%
   gather(key=var,
-                 value = val,-X,-Y,-Z,-id,-taxa,-class,
+                 value = val,-X,-Y,-Z,-id,-taxa,-class,-quad,
                  -classn,-rec,-pres,-contains("density"))%>%
   separate(var,c("var","scale"),sep="_")
 ```
@@ -86,46 +91,113 @@ d%>%
   ungroup()%>%
   dplyr::select(contains("rough"),contains("hole"),contains("gcs"))%>%
   ggpairs(lower = list(continuous = my_bin))
+
+
+give.n <- function(x){ #f to calculate mean in ggplot
+   return(c(y = mean(x), label = length(x)))
+}
+
 ```
 
 
-## Violin plot comparing background with presences
+## Boxplot comparing background with presences
 
+### Hole
 ```{r, warning=F}
 dl%>%
-  ggplot(aes(x=presence,y=val))+
-  geom_violin()+
-  facet_grid(scale~var, scales="free_x")+
+  filter(var=="hole")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_wrap(~scale, scales="free")+
+  xlab("Presence/Absence")+
+  ylab("Environmental Variable")+
+  stat_summary(fun.data = give.n, geom = "text")
+
+dl%>%
+  filter(var=="hole")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_wrap(scale~quad, scales="free")+
+  xlab("Presence/Absence")+
+  ylab("Environmental Variable")+
+  stat_summary(fun.data = give.n, geom = "text")
+```
+
+### Roughness
+```{r, warning=F}
+dl%>%
+  filter(var=="rough")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_wrap(~scale, scales="free")+
   xlab("Presence/Absence")+
   ylab("Environmental Variable")+
   scale_y_log10()+
-  coord_flip()
+  stat_summary(fun.data = give.n, geom = "text")
+
+dl%>%
+  filter(var=="rough")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_grid(scale~quad, scales="free_y")+
+  xlab("Presence/Absence")+
+  ylab("rough")+
+  scale_y_log10()+
+  stat_summary(fun.data = give.n, geom = "text")
 ```
 
-## Substrate Type
+### Signed Gaussian Curvature
+```{r, warning=F}
+dl%>%
+  filter(var=="gcs")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_grid(~scale, scales="free_y")+
+  xlab("Presence/Absence")+
+  ylab("gcs")+
+  scale_y_continuous(trans = 'asinh')+
+  stat_summary(fun.data = give.n, geom = "text")
 
-```{r plotSubstrate, warning=F}
-d%>%
-  ggplot(aes(x=as.factor(class),group=as.factor(pres),fill=as.factor(pres)))+
-  stat_count(aes(y=..prop..), position='dodge')+
-  scale_fill_manual(values=c("black","red"),name="Presence\nAbsence")+
-  xlab("Point Classification")+
-  ylab("Proportion of Presence/Absences")
+dl%>%
+  filter(var=="gcs")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_grid(scale~quad, scales="free_y")+
+  xlab("Presence/Absence")+
+  ylab("gcs")+
+  scale_y_continuous(trans = 'asinh')+
+  stat_summary(fun.data = give.n, geom = "text")
 ```
 
+### Slope
+```{r, warning=F}
+dl%>%
+  filter(var=="slope")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_grid(~scale, scales="free_y")+
+  xlab("Presence/Absence")+
+  ylab("slope")+
+  stat_summary(fun.data = give.n, geom = "text")
 
-## 3D Plot
-
-Plot of the new 'hole' metric.
-
-```{r,as.is=T, cache=F}
-scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi = 0)
-
-# Or make an interactive plot:
-#nColors <- 64
-#cols <- as.character(cut(fulld$dists,breaks=nColors,labels= inferno(nColors)))
-#scatterplot3js(fulld$x,fulld$y,fulld$z, color=cols,size = 0.05,stroke = NULL,pch=".")
+dl%>%
+  filter(var=="slope")%>%
+  ggplot(aes(x=taxa,y=val))+
+  stat_compare_means()+
+  geom_boxplot(notch = T)+
+  facet_grid(scale~quad, scales="free_y")+
+  xlab("Presence/Absence")+
+  ylab("slope")+
+  stat_summary(fun.data = give.n, geom = "text")
 ```
+
 
 # Distribution Model
 
@@ -134,29 +206,22 @@ scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi =
 Create a subsetted, non-spatial table to use for model fitting and scale the variables.
 
 ```{r preparefitdata}
-nbg=10000  # number of background points to select
-
-subset_id=c(d$id[d$pres==1], # keep all presences
-            d$id[sample(which(d$pres==0),nbg,replace = F)])  # sample only nbg background points
 
 fitdata=d%>%
-  mutate(pres=as.logical(pres),
-         class=as.factor(class))%>%
-  filter(id%in%subset_id)%>%
-  select(pres,X,Y,Z,class,gcs_10,gcs_5,rough_10,rough_5,hole_10,hole_5,slope,aspect)%>% #select which variables to include
-  mutate_if(is.numeric, function(x) as.vector(scale(x)))%>%  #scale all numeric variables so they have a mean of 0 and slope of 1
-  na.omit()#%>% # drop rows with missing variables
+  mutate(oct_pres=ifelse(taxa=="ocr",1,0),
+         class=as.factor(class))
 
-
+m1=glm(oct_pres~quad+class+rough_5+rough_10+gcs_5+gcs_10+slope_5+hole_5+hole_10,data=fitdata, family=binomial,weights=1e3^(1-oct_pres))
+summary(m1)
 ```
 
 ## Fit Maxent Distribution Model
 
 There are lots of options that will need to be considered.  This is one basic way:
 
-```{r maxent}
-m1 <- maxent(x=select(fitdata,-X,-Y,-Z,-pres),
-             p=as.numeric(fitdata$pres),
+```{r maxent eval=F}
+mx1 <- maxent(x=dplyr::select(fitdata,-X,-Y,-Z,-pres),
+             p=as.numeric(fitdata$oct_pres),
     args=c(
 		'randomtestpoints=30',
 		'betamultiplier=1',
@@ -181,7 +246,15 @@ Need to add model comparison, validation, etc.
 ### Variable importance
 
 ```{r}
-plot(m1)
+coef <- tidy(m1, conf.int = TRUE)
+coef
+
+ggplot(coef, aes(term, estimate))+
+  geom_point()+
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  labs(title = "Coefficients of a linear regression model")
+
+ggcoef(m1)
 ```
 
 
@@ -189,7 +262,7 @@ plot(m1)
 
 Relationship between each predictor (x-axis) and 'habitat suitability.'  These are estimates of the 'realized recuitment niche' based on the environmental data.  Don't put too much confidence in these results - we need to add more data and do much better model validation, etc.
 
-```{r}
+```{r, eval=F}
 response(m1,expand=0)
 ```
 
