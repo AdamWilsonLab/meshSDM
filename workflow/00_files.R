@@ -1,7 +1,7 @@
 library(tidyverse)
 
 cfiles=data.frame(
-  path=list.files("data/20181022/",
+  path=list.files("data/20181109/",
                    pattern=".*cloud_.*txt",recursive = T, full=T),
   stringsAsFactors = F)%>%
   mutate(
@@ -13,7 +13,7 @@ cfiles=data.frame(
   spread(scale, path)  # broken on horae!?!
 
 rfiles=data.frame(
-  rpath=list.files("data/20181022/",
+  rpath=list.files("data/20181109/",
                   pattern=".*rec.*shp",recursive = T, full=T),
   stringsAsFactors = F)%>%
   mutate(
