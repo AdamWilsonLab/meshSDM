@@ -4,7 +4,6 @@ source("workflow/00_setup.R")
 
 library(foreach)
 library(doParallel)
-library(rgdal)
 library(sf)
 library(tidyverse)
 registerDoParallel(10)
@@ -12,9 +11,10 @@ registerDoParallel(10)
 
 nbg=10000  # number of background points to select from each quad
 
+dataversion="20190128"
 
 files=data.frame(
-  path=list.files("data",pattern="Rdata", full=T),stringsAsFactors = F)%>%
+  path=list.files(file.path("data",dataversion,"processed"),pattern="Rdata", full=T),stringsAsFactors = F)%>%
   mutate(file=basename(path),
          quad=sub("[.]Rdata","",file))
 
@@ -37,7 +37,7 @@ poolquad <-
       dplyr::select(-Bf,-Gf,-Rf,-r_n,-r_z,-geometry,
                     -contains("angle"),
                     -contains("sign"),
-                    -contains("smooth"),
+#                    -contains("smooth"),
                     -contains("dist"),
                     -contains("aspect"),
                     -contains("gc_"),
@@ -48,4 +48,4 @@ poolquad <-
   }
 
 
-save(poolquad,file=paste("data/model/multi_quad_sample.Rdata"))
+save(poolquad,file=file.path("data",dataversion,"multi_quad_sample.Rdata"))

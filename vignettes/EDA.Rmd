@@ -1,0 +1,193 @@
+---
+title: "EDA on pooled quad data"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+Load packages, etc.
+
+```{r setup, include=T}
+source("workflow/00_setup.R")
+knitr::opts_knit$set(self.contained=T)
+knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
+library(sf)
+```
+
+
+```{r libraries, warning=FALSE,message=FALSE, cache=F}
+library(foreach)
+library(doParallel)
+library(sf)
+library(tidyverse)
+
+library(viridis)
+library(GGally)
+
+```
+
+## Data Import
+
+This reads in the data object created with Data_Processing.Rmd.
+
+```{r loaddata}
+dataversion="20190128"
+load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+```
+### Data Description
+
+An incomplete description of columns in this dataset.
+
+* `dist`: distance to the smoother surface but without a sign - so hills and holes are both positive
+* `hole`: `dist`x`sign` so holes are negative and hills positive.
+* `gc`: unsigned gaussian curvature with specified radius
+* `gcs`: signed gaussian curvature (the sign was created from the dist metric)
+
+See Data_Processing.Rmd for the code.
+
+
+
+
+Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
+```{r meltdata}
+d=poolquad
+
+# Transform to 'long' format for easier ggplotting, etc.
+dl=poolquad%>%
+  ungroup()%>%
+  gather(key=var,
+                 value = val,-quad,-X,-Y,-Z,-id,-taxa,-class,
+                 -classn,-rec,-pres,-contains("density"))%>%
+  separate(var,c("var","scale"),sep="_")
+```
+
+# Exploratory Data Analysis
+
+Plot the distribution of environmental variables.
+
+## Correlation matrix
+
+Correlation between the variables. Surprisingly even the two "rough" variables are very different.
+```{r, warning=F}
+my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
+  ggplot(data = data, mapping = mapping) +
+    geom_hex(...) +
+    scale_fill_gradient(low = low, high = high)
+}
+
+d%>%
+  ungroup()%>%
+  dplyr::select(contains("rough"),contains("hole"),contains("gcs"))%>%
+  ggpairs(lower = list(continuous = my_bin))
+```
+
+
+## Box plot comparing background with presences
+
+```{r, warning=F}
+dl%>%
+  ggplot(aes(x=pres,y=val))+
+  geom_boxplot()+
+  facet_grid(scale~var, scales="free")+
+  xlab("Presence/Absence")+
+  ylab("Environmental Variable")
+```
+
+
+```{r}
+d%>%
+  ggplot(aes(x=X,y=Y,col=Z))+
+  facet_wrap(~quad,scales = "free")+
+  geom_point(size=.1)+
+  geom_point(data=filter(d,!is.na(rec)),aes(shape=taxa),col="red")+ #add the recruits
+  scale_color_viridis_c()+
+  coord_equal()
+
+d%>%
+  ggplot(aes(x=X,y=Y,col=Z_smooth_5))+
+  facet_wrap(~quad,scales = "free")+
+  geom_point(size=.1)+
+  geom_point(data=filter(d,!is.na(rec)),aes(shape=taxa),col="red")+ #add the recruits
+  scale_color_viridis_c()
+
+```
+
+
+```{r}
+d%>%
+  ggplot(aes(x=X,y=Y,col=slope_5))+
+  facet_wrap(~quad,scales = "free")+
+  geom_point(size=.1)+
+  geom_point(data=filter(d,!is.na(rec)),aes(shape=taxa),col="red")+
+  scale_color_viridis_c()
+
+```
+
+## Take a transect through the middle of the quad
+```{r}
+pick <- function(condition){ function(d) d %>% filter(!!enquo(condition)) }
+
+ycut=0.02  #distance from ymean to include in the 'transect' 
+
+# get mean y values to make a 'transect' through the middle
+ymeans=d%>%
+  group_by(quad)%>%
+  summarize(ymean=mean(Y))%>%
+  mutate(ymin=ymean-ycut,ymax=ymean+ycut)
+
+
+
+d%>%
+  ggplot(aes(x=X,y=Y,col=slope_5))+
+  facet_wrap(~quad,scales = "free")+
+  geom_point(size=.1)+
+  geom_point(data=filter(d,!is.na(rec)),aes(shape=taxa),col="red")+
+  scale_color_viridis_c()
+
+
+d%>%
+  left_join(ymeans,by="quad")%>%
+  filter(abs(Y-ymean)<ycut)%>%
+  ggplot(aes(x=X,y=Z,col=slope_5))+
+  facet_wrap(~quad,scales = "free")+
+  geom_point(size=.1)+
+  geom_point(data= pick(~(!is.na(rec)&abs(Y-ymean)<ycut)),aes(shape=taxa),col="red")+
+  scale_color_viridis_c()
+
+```
+
+## 2D histogram with location of recruits
+```{r}
+d%>%
+  ggplot(aes(x=rough_20,y=slope_20))+
+  facet_wrap(~quad,scales = "free")+
+  geom_hex(bins=30)+
+  geom_point(
+    data=filter(d,!is.na(rec)),
+    aes(shape=taxa),
+    col="red")+
+  scale_fill_viridis_c()
+```
+
+
+## Substrate Type
+
+```{r plotSubstrate, warning=F}
+d%>%
+  ggplot(aes(x=as.factor(class),group=as.factor(pres),fill=as.factor(pres)))+
+  stat_count(aes(y=..prop..), position='dodge')+
+  scale_fill_manual(values=c("black","red"),name="Presence\nAbsence")+
+  xlab("Point Classification")+
+  ylab("Proportion of Presence/Absences")
+```
+
+
+## 3D Plot
+
+Plot of the new 'hole' metric.
+
+```{r,as.is=T, cache=F}
+scatter3D(d$X, d$Y, d$Z,colvar = d$hole_10,bty = "g", cex=.01,theta = 100, phi = 0)
+```

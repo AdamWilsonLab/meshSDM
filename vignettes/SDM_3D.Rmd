@@ -13,6 +13,8 @@ Load packages, etc.
 source("workflow/00_setup.R")
 knitr::opts_knit$set(self.contained=T, root.dir="..")
 knitr::opts_chunk$set(echo = TRUE, cache = T, fig.width = 10, fig.height = 10)
+Sys.setenv(LD_LIBRARY_PATH=paste("/usr/lib64/R/lib:/util/academic/gcc/gcc7.3.0/install/gcc/lib64:/util/academic/gcc/gcc-7.3.0/install/gcc/lib", Sys.getenv("LD_LIBRARY_PATH"),sep=":"))
+library(sf)
 ```
 
 
