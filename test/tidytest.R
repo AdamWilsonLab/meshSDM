@@ -8,3 +8,7 @@ stocks <- data.frame(
 )
 stocksm <- stocks %>% gather(stock, price, -time)
 stocksm %>% spread(stock, price)
+
+
+library(ggplot2)
+ggplot(data.frame(x=1:10),aes(x=x))+geom_bar()

@@ -1,3 +1,8 @@
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
 
 torus <- function(x, y, dist, fun=NULL, method="2D"){
   if(!"sf"%in%class(x)) stop("x is not an sf object.")
@@ -8,7 +13,7 @@ torus <- function(x, y, dist, fun=NULL, method="2D"){
             between(X,tbbox[["xmin"]],tbbox[["xmax"]]),
             between(Y,tbbox[["ymin"]],tbbox[["ymax"]]),
             between(Z,tbbox[["zmin"]],tbbox[["zmax"]]))
-  yb2=filter(yb1,class!=x$class[1])
+  yb2=filter(yb1,!class%in%c("scr","ocr"))
 
   if(method=="3D"){
     ymat <- st_coordinates(yb2)
@@ -38,13 +43,15 @@ if(is.null(fun))  {
 }
 
 if(!is.null(fun)){
-    obs=summarise_if(yb3,is.numeric,fun)
+  obs=yb3%>%
+    summarise_if(is.numeric,fun)%>%
+    mutate(class=getmode(yb3$class))
   return(obs)
   }
 
 
   if(F){
-  ggplot(yb3,aes(x=X,y=Y,col=as.factor(dist)))+geom_point()
+  ggplot(yb3,aes(x=X,y=Y,col=as.factor(class)))+geom_point()
 
     library(rgl)
     viz=as.matrix(st_coordinates(pts))
