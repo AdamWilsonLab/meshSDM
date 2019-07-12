@@ -9,9 +9,9 @@ library(tidyverse)
 registerDoParallel(10)
 
 
-nbg=10000  # number of background points to select from each quad
+nbg=100000  # number of background points to select from each quad
 
-dataversion="20190128"
+dataversion="20190415"
 
 files=data.frame(
   path=list.files(file.path("data",dataversion,"processed"),pattern="Rdata", full=T),stringsAsFactors = F)%>%
@@ -19,7 +19,7 @@ files=data.frame(
          quad=sub("[.]Rdata","",file))
 
 
-poolquad <-
+sample_all_quads <-
   foreach(i=1:nrow(files),.combine=rbind.data.frame) %dopar% {
     f=files$path[i]
     d1 <- local({  # this weird thing loads the data for one quad and renames it as 'd'
@@ -48,4 +48,30 @@ poolquad <-
   }
 
 
-save(poolquad,file=file.path("data",dataversion,"multi_quad_sample.Rdata"))
+save(sample_all_quads,file=file.path("data",dataversion,
+                                     paste0("all_quads_",dataversion,"_",
+                                            format(nbg, scientific = FALSE),".Rdata")))
+
+
+if (F){
+#
+d2=d1%>%
+  ungroup()%>%
+  dplyr::select(
+    X,Y,Z,Nx,Ny,Nz,
+    contains("X"),    contains("Y"),    contains("Z"),
+    -Bf,-Gf,-Rf,-r_n,-r_z,-geometry,
+    contains("angle"),
+    contains("sign"),
+    contains("smooth"),
+    contains("rough"),
+    contains("slope"),
+    contains("dist"),
+    contains("aspect"),
+    contains("gc"),
+    r_area,Ny,Nx,Nz) # remove extras
+write_csv(d2,file.path("data",dataversion,paste0(files$quad[i],"_test.csv")))
+}
+
+
+

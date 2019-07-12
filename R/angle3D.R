@@ -20,11 +20,18 @@ fdist <- function(x1,x2,y1=NULL, y2=NULL, z1=NULL, z2=NULL){
 }
 
 
-angle3D=function(x){
+angle3D=function(x1,x2=NULL,x3=NULL,x4=NULL,x5=NULL,x6=NULL,x7=NULL,x8=NULL,x9=NULL){
+  if(is.vector(x1)) {
+    a=x1[1:3]
+    b=x1[4:6]
+    c=x1[7:9]
+  }
+  if(is.scalar(x1)){
+    a=c(x1,x2,x3)
+    b=c(x4,x5,x6)
+    c=c(x7,x8,x9)
+  }
   # https://stackoverflow.com/questions/19729831/angle-between-3-points-in-3d-space
-  a=x[1:3]
-  b=x[4:6]
-  c=x[7:9]
   ab = c(b[1] - a[1], b[2] - a[2], b[3] - a[3])
   bc = c(c[1] - b[1], c[2] - b[2], c[3] - b[3])
   abVec = sqrt(ab[1] * ab[1] + ab[2] * ab[2] + ab[3] * ab[3])

@@ -42,7 +42,8 @@ library(broom)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-load("data/model/multi_quad_sample.Rdata")
+dataversion="20190415"
+load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
 
 #d=mutate(d,
 #         taxa=case_when(

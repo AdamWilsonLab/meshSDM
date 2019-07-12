@@ -55,16 +55,16 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 #
 mcoptions <- list(preschedule=FALSE, set.seed=FALSE)
 
-dataversion="20190128"
+dataversion="20190415"
 
 cfiles=data.frame(
   path=list.files(file.path("data",dataversion),
-                  pattern=".*cloud_.*txt",recursive = T, full=T),
+                  pattern=".*subsampled_.*txt",recursive = T, full=T),
   stringsAsFactors = F)%>%
   mutate(
     fname=basename(path),
-    quad=sub("_cloud_.*","",sub("[.]txt","",fname)),
-    scale=paste0("s_",sub("^.*_cloud_","",sub("[.]txt","",fname)))
+    quad=sub("_subsampled_.*","",sub("[.]txt","",fname)),
+    scale=paste0("s_",sub("^.*_subsampled_","",sub("[.]txt","",fname)))
   )%>%
   dplyr::select(-fname)%>%
   spread(scale, path)  # broken on horae!?!
@@ -78,13 +78,24 @@ rfiles=data.frame(
     quad=sub("_rec.*$","",fname))%>%
   dplyr::select(-fname)
 
+# check all quads are in rfiles and cfiles
+#all(rfiles$quad%in%cfiles$quad)
+#all(cfiles$quad%in%rfiles$quad)
+#cfiles$quad[!cfiles$quad%in%rfiles$quad]
+#grep("eut135r",rfiles$quad)
+
 files=left_join(cfiles,rfiles,by="quad")
 
+
 files=files%>%
-  select(-s_5)%>%
   na.omit(files)
 
-foreach(i=1:nrow(files),  # parallel loop over quadrats
+
+#files_long=gather(files,scale,file,-quad,-rpath)
+#f=files_long[1,]
+#res=clean_cloud(file = as.vector(f$file))
+
+proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
         .inorder=F,
         .errorhandling=c('pass'),
         .options.multicore=mcoptions) %dopar% {  # start the loop
@@ -107,19 +118,21 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
 
           message(paste("################# Importing data for quad: ",f$quad))
 
-          d005=read_csv(f$s_005,progress = F,col_types = cols())%>%slice(-1)
-          d01=read_csv(f$s_01,progress = F,col_types = cols())%>%slice(-1)
-          d02=read_csv(f$s_02,progress = F,col_types = cols())%>%slice(-1)
+          d05=read_csv(f$s_5,progress = F,col_types = cols())%>%slice(-1)
+          d10=read_csv(f$s_10,progress = F,col_types = cols())%>%slice(-1)
+          d20=read_csv(f$s_20,progress = F,col_types = cols())%>%slice(-1)
+          d50=read_csv(f$s_50,progress = F,col_types = cols())%>%slice(-1)
+          d100=read_csv(f$s_100,progress = F,col_types = cols())%>%slice(-1)
 
 
           if(F){
-          ncol(d005)
-          ncol(d01)
-          ncol(d02)
+          ncol(d05)
+          ncol(d10)
+          ncol(d20)
           #needs commas - eut19r
-          nrow(d005)
-          nrow(d01)
-          nrow(d02)
+          nrow(d05)
+          nrow(d10)
+          nrow(d20)
 }
 
           # ect39l has different numbers of rows
@@ -127,7 +140,7 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
           #Select only the variables you want to use in the model.  This just simplifies the data and makes the names shorter. Only the variables included int he below will be kept for analysis.
 
           env=cbind(
-            dplyr::select(d005,X="Coord. X",
+            dplyr::select(d05,X="Coord. X",
                           Y="Coord. Y",
                           Z="Coord. Z",
                           Rf=one_of(c("Rf","R")),
@@ -145,7 +158,7 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
                           aspect_5="Dip direction (degrees)",
                           density_5="Volume density (r=0.005)",
                           slope_5="Dip (degrees)"),
-            dplyr::select(d01,
+            dplyr::select(d10,
                           gc_10="Gaussian curvature (0.01)",
                           X_smooth_10="Coord. X.smooth(0.01)",
                           Y_smooth_10="Coord. Y.smooth(0.01)",
@@ -153,14 +166,30 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
                           rough_10="Roughness(0.01)",
                           density_10="Volume density (r=0.01)",
                           slope_10="Dip (degrees)"),
-            dplyr::select(d02,
+            dplyr::select(d20,
                           gc_20="Gaussian curvature (0.02)",
                           X_smooth_20="Coord. X.smooth(0.02)",
                           Y_smooth_20="Coord. Y.smooth(0.02)",
                           Z_smooth_20="Coord. Z.smooth(0.02)",
                           rough_20="Roughness(0.02)",
                           density_20="Volume density (r=0.02)",
-                          slope_20="Dip (degrees)"))%>%
+                          slope_20="Dip (degrees)"),
+            dplyr::select(d50,
+                          gc_50="Gaussian curvature (0.05)",
+                          X_smooth_50="Coord. X.smooth(0.05)",
+                          Y_smooth_50="Coord. Y.smooth(0.05)",
+                          Z_smooth_50="Coord. Z.smooth(0.05)",
+                          rough_50="Roughness(0.05)",
+                          density_50="Volume density (r=0.05)",
+                          slope_50="Dip (degrees)"),
+            dplyr::select(d100,
+                          gc_100="Gaussian curvature (0.1)",
+                          X_smooth_100="Coord. X.smooth(0.1)",
+                          Y_smooth_100="Coord. Y.smooth(0.1)",
+                          Z_smooth_100="Coord. Z.smooth(0.1)",
+                          rough_100="Roughness(0.1)",
+                          density_100="Volume density (r=0.1)",
+                          slope_100="Dip (degrees)"))%>%
             mutate(
               #      taxa=case_when(
               #        classn ==  9   ~ "ocr",
@@ -187,10 +216,31 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
           env$dist_5=fdist( env$X,env$X_smooth_5, env$Y,env$Y_smooth_5, env$Z,env$Z_smooth_5)
           env$dist_10=fdist(env$X,env$X_smooth_10,env$Y,env$Y_smooth_10,env$Z,env$Z_smooth_10)
           env$dist_20=fdist(env$X,env$X_smooth_20,env$Y,env$Y_smooth_20,env$Z,env$Z_smooth_20)
+          env$dist_50=fdist(env$X,env$X_smooth_50,env$Y,env$Y_smooth_50,env$Z,env$Z_smooth_50)
+          env$dist_100=fdist(env$X,env$X_smooth_100,env$Y,env$Y_smooth_100,env$Z,env$Z_smooth_100)
+
+          # distance to only z smooth
+          env$distz_5=fdist( env$X,env$X, env$Y,env$Y, env$Z,env$Z_smooth_5)
+          env$distz_10=fdist(env$X,env$X,env$Y,env$Y,env$Z,env$Z_smooth_10)
+          env$distz_20=fdist(env$X,env$X,env$Y,env$Y,env$Z,env$Z_smooth_20)
+          env$distz_50=fdist(env$X,env$X,env$Y,env$Y,env$Z,env$Z_smooth_50)
+          env$distz_100=fdist(env$X,env$X,env$Y,env$Y,env$Z,env$Z_smooth_100)
 
 
           # Angle to smooth
-          env$angle_20=apply(env[,c("X","Y","Z",
+          env$angle_100=apply(env[,c("X","Y","Z",
+                                    "X_smooth_100",
+                                    "Y_smooth_100",
+                                    "Z_smooth_100",
+                                    "Nx","Ny","Nz")],1,angle3D)
+
+          env$angle_50=apply(env[,c("X","Y","Z",
+                                    "X_smooth_50",
+                                    "Y_smooth_50",
+                                    "Z_smooth_50",
+                                    "Nx","Ny","Nz")],1,angle3D)
+
+                    env$angle_20=apply(env[,c("X","Y","Z",
                                     "X_smooth_20",
                                     "Y_smooth_20",
                                     "Z_smooth_20",
@@ -210,15 +260,23 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
 
           # Correct Sign of hole
           # # Clean up with mutate
-          env$sign_20=ifelse(env$angle_20<90,-1,1)
+          env$sign_100= -cos(env$angle_100*(pi/180))#ifelse(env$angle_100<90,-1,1)
+          env$hole_100=env$dist_100*env$sign_100
+          env$gcs_100=env$gc_100*env$sign_100
+
+          env$sign_50=-cos(env$angle_50*(pi/180)) #ifelse(env$angle_50<90,-1,1)
+          env$hole_50=env$dist_50*env$sign_50
+          env$gcs_50=env$gc_50*env$sign_50
+
+          env$sign_20=-cos(env$angle_20*(pi/180)) #ifelse(env$angle_20<90,-1,1)
           env$hole_20=env$dist_20*env$sign_20
           env$gcs_20=env$gc_20*env$sign_20
 
-          env$sign_10=ifelse(env$angle_10<90,-1,1)
+          env$sign_10=-cos(env$angle_10*(pi/180)) #ifelse(env$angle_10<90,-1,1)
           env$hole_10=env$dist_10*env$sign_10
           env$gcs_10=env$gc_10*env$sign_10
 
-          env$sign_5=ifelse(env$angle_5<90,-1,1)
+          env$sign_5=-cos(env$angle_5*(pi/180)) #ifelse(env$angle_5<90,-1,1)
           env$hole_5=env$dist_5*env$sign_5
           env$gcs_5=env$gc_5*env$sign_5
 
@@ -347,6 +405,16 @@ foreach(i=1:nrow(files),  # parallel loop over quadrats
 
           return(data.frame(quad=f$quad,npoints=nrow(d)))
         }
+
+
+## Summarize proc_report
+names(proc_report)=files$quad
+
+f_error=which(sapply(proc_report,function(x) !grepl("completed",x)))
+
+files$quad[f_error]
+
+proc_report[f_error]
 
 #files$quad[c(7,11,16)]
 #ggplot(d,aes(x=X,y=Y,col=class))+

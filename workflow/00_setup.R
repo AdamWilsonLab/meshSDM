@@ -11,12 +11,13 @@ if(system("hostname",intern = T)=="srv-u10-26.cbls.ccr.buffalo.edu"){
 #  dyn.load("/util/academic/grass/gdal-2.2.0/lib/libgdal.so.20")
 #  dyn.load("/projects/academic/adamw/R/library/e1071/libs/e1071.so")
   library(sf)
+  library(assertthat)
 }
 
 
 library(foreach)
 library(doParallel)
-registerDoParallel(26) #ask for 10 cores
+registerDoParallel(26) #ask for cores
 message(paste("################ Using ",getDoParWorkers()," cores..."))
 
 library("tidyverse")
