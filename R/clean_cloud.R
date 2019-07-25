@@ -1,8 +1,8 @@
-f=files[i,] # selects which quadrat is being processed in this iteration
+#f=files[i,] # selects which quadrat is being processed in this iteration
 
 
-f="data/3d_tile/3DTILES_subsampled_20.txt"
-f="data/20190415/ect16l.data/ect16l_ASCII_subsampled/ect16l_subsampled_10.txt"
+#f="data/3d_tile/3DTILES_subsampled_20.txt"
+#f="data/20190415/ect16l.data/ect16l_ASCII_subsampled/ect16l_subsampled_10.txt"
 
 clean_cloud <- function(file,prefix=NULL){
 

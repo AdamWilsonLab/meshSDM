@@ -19,8 +19,6 @@ library(sf)
 
 
 ```{r libraries, warning=FALSE,message=FALSE, cache=F}
-options(java.parameters = "-Xmx2048m")
-library(rJava)
 library(foreach)
 library(doParallel)
 library(rgdal)
@@ -42,8 +40,9 @@ library(broom)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-dataversion="20190415"
-load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+#dataversion="20190415"
+#load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+load("data/20190719/all_quads_20190415_10000.Rdata")
 
 #d=mutate(d,
 #         taxa=case_when(
