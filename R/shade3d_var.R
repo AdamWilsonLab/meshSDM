@@ -2,7 +2,7 @@ shade3d_var<-function(mesh,data,clear_rgl=T,palette = "inferno"){
 
   if(nfaces(mesh)!=length(data)) stop(paste(
     "Mesh has ",nfaces(mesh)," faces but ",length(data)," data points provided."))
-    if(clear_rgl) rgl.clear()
+  if(clear_rgl) rgl.clear()
   x=pretty(seq(min(data,na.rm=T),max(data,na.rm=T),len=10))
   cols=colourvalues::colour_values(x,)
   mesh$material$color=colourvalues::colour_values(data,palette = palette)

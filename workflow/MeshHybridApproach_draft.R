@@ -13,7 +13,8 @@ library(sf)
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 
-pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_10.txt")%>%
+pts=read_csv("tempdata/ect110r_subsampled_5.txt")%>%
+#pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_10.txt")%>%
   slice(-1)%>%
   cleancols()%>%
   mutate(x=x-1,
@@ -58,8 +59,7 @@ pts=mutate(pts,class=case_when(
 #############################
 ## Import & process mesh
 mesh_full=vcgPlyRead("tempdata/3d_tile/3DTiles.ply",clean = T)
-
-#mesh=vcgPlyRead("data/ect110r.ply",clean = T)
+mesh_full=vcgPlyRead("tempdata/ect110r.ply",clean = T)
 
 # potentially smooth/clean. If not desired, simply set mesh=mesh_full
 mesh_side=0.001 #mesh will be simplified to have an average side length of this value in m.
@@ -129,11 +129,13 @@ if(F) hist(faces_data$n_points,breaks = 100)
 
 ##########################################
 ####  Extract data for occurrence points
-occ=read_sf("tempdata/3d_tile/3DTILES.data/OcTiles.shp")%>%
+occ=read_sf("tempdata/ect110r_rec.shp")%>%
+  filter(grepl("ocr",NAME))%>%
+#  occ=read_sf("tempdata/3d_tile/3DTILES.data/OcTiles.shp")%>%
   st_set_crs(NA)%>%
   st_set_crs(proj)%>%
-  mutate(oid=1:n())%>%
-  filter(NAME%in%paste0("test",c(1,2,9,10,4,5,6,11,14,15,17,18,19,20,21))) # keep only hole-dwellers if desired
+  mutate(oid=1:n())#%>%
+  #filter(NAME%in%paste0("test",c(1,2,9,10,4,5,6,11,14,15,17,18,19,20,21))) # keep only hole-dwellers if desired
 
 ### Match points to faces of the mesh
 pts_occ=pts%>%filter(class%in%c("ocr"))%>%
@@ -214,18 +216,26 @@ pts_fid_adj=pts_fid_torus%>%
 faces_data$pres_adj=ifelse(faces_data$fid%in%pts_fid_adj$fid,1,0)
 
 if(F) {
-  shade3d_var(mesh,faces_data$pres_torus,palette = "inferno")
+  shade3d_var(mesh,faces_data$pres_torus,palette = "magma")
   shade3d_var(mesh,faces_data$pres)
 }
 
 ##########################################
+##########################################
+## Write out data object
+mesh$data=faces_data
+save(mesh,file="tempdata/mesh.Rdata")
+
+##########################################
+load("tempdata/mesh.Rdata")
+
 ## Maxent
 library(maxnet)
 n_background=10000
 
 model_data=bind_rows(
-  filter(faces_data,pres_adj==1),  # keep all presences
-  filter(faces_data,pres_adj==0)%>%
+  filter(mesh$data,pres_adj==1),  # keep all presences
+  filter(mesh$data,pres_adj==0)%>%
     na.omit()%>%sample_n(n_background) # use n_background samples
 )
 
@@ -234,36 +244,55 @@ m1=maxnet(p=model_data$pres_adj,
          select(angle_median,
                 sign_median,
                 rough_median,
-                slope_median#, # include desired variables here
-#                hole_median
+                dist_median,
+#                slope_median, # include desired variables here
+                hole_q25
                ))
 
-plot(m1)
+plot(m1,type="logistic")
 
 # put predictions back on landscape:
 # predict will remove all NA values making it hard to reconnect to the mesh
 # so do it first here:
-predict_data=na.omit(faces_data)
+predict_data=na.omit(mesh$data)
 # then do prediction
-m1_predict=predict(m1,newdata=predict_data,type="logistic",clamp=F)
+m1_predict=predict(m1,newdata=predict_data,type="logistic",clamp=T)
 # then join back with faces_data to be sure everything lines up)
-predict_data2=left_join(faces_data,cbind(predict_data,m1pred=m1_predict),by="fid")
+predict_data2=left_join(mesh$data,cbind(predict_data,m1pred=m1_predict),by="fid")
 
 if(F) {
   shade3d_var(mesh,predict_data2$m1pred)
-  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
-  points3d(faces_data[faces_data$pres_adj==1,c("x","y","z")],col="red",size=10) #matched face for each
+#  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
+  points3d(mesh$data[mesh$data$pres_adj==1,c("x","y","z")],col="red",size=10) #matched face for each
 }
-
 
 
 ###########################################
 ## plots
 
+# gaussian curvature of the mesh
 meshcurve=vcgCurve(mesh)
 meshcurvel=sign(meshcurve$gaussvb)*log(abs(meshcurve$gaussvb)+1)
-
 shade3d_var(mesh,meshcurvel)
+
+
+######
+# visible points from above
+# might be useful to illustrate/quantify how much is lost if you did 2.5D
+# e.g. you can estimate how much of the suitable habitat isn't visible from above
+
+# first pick a viewpoint - here I use the middle of x and y
+mesh_centroid=apply(mesh$vb,1,range)%>%
+  apply(2,function(x) (x[2]-x[1])/2)
+
+visible_vid=getVisibleVertices(mesh, mesh_centroid[1:3]+c(0,0,1), offset = 0.01, cores = 1)
+# get vector of T/F whether you can see each face
+visible=1:nfaces(mesh)%in%getFaces(mesh,visible_vid)
+
+shade3d_var(mesh,ifelse(visible,1,0))
+
+ggplot(faces_data,aes(y=m1pred))
+
 
 plot3d(mesh)
 plot3d(mesh,type = "wire")
