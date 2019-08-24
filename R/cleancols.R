@@ -9,7 +9,7 @@ cleancols <- function(x){
                 r=one_of(c("Rf","R")),
                 g=one_of(c("Gf","G")),
                 b=one_of(c("Bf","B")),
-                classn=Classification,
+                class=Classification,
                 x_smooth=contains("Coord. X.smooth"),
                 y_smooth=contains("Coord. Y.smooth"),
                 z_smooth=contains("Coord. Z.smooth"),

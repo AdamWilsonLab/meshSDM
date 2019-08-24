@@ -261,11 +261,23 @@ m1_predict=predict(m1,newdata=predict_data,type="logistic",clamp=T)
 predict_data2=left_join(mesh$data,cbind(predict_data,m1pred=m1_predict),by="fid")
 
 if(F) {
-  shade3d_var(mesh,predict_data2$m1pred)
+  shade3d_var(mesh,predict_data2$m1pred, palette="magma")
 #  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
   points3d(mesh$data[mesh$data$pres_adj==1,c("x","y","z")],col="red",size=10) #matched face for each
 }
 
+if(F) {
+  #fading from points to mesh
+  xlim=c(-.1,.1)
+  ylim=c(-.2,-.3)
+  plot3d(mesh,type="shade",alpha=rescale_mid(mesh$vb[1,],c(0,1),mid=.01),
+         xlim=xlim,ylim=ylim,aspect=F,smooth=F,forceClipRegion=T,add=F)
+  wire3d(mesh,type="wire",alpha=rescale_mid(mesh$vb[1,],c(0,1),mid=.8),
+         aspect=F,smooth=F,add=T)
+  #  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
+  points3d(pts[,c("x","y","z")],size=.05,col="darkblue",
+           alpha=rescale_mid(pts$x,c(1,0),mid=.01),add=T)   #points3d(mesh$data[,c("x","y","z")],size=.1) #matched face for each
+}
 
 ###########################################
 ## plots
