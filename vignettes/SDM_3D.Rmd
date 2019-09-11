@@ -19,8 +19,6 @@ library(sf)
 
 
 ```{r libraries, warning=FALSE,message=FALSE, cache=F}
-options(java.parameters = "-Xmx2048m")
-library(rJava)
 library(foreach)
 library(doParallel)
 library(rgdal)
@@ -42,8 +40,9 @@ library(broom)
 This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
-dataversion="20190415"
-load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+#dataversion="20190415"
+#load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+load("data/20190719/all_quads_20190415_10000.Rdata")
 
 #d=mutate(d,
 #         taxa=case_when(
@@ -223,7 +222,7 @@ summary(m1)
 
 There are lots of options that will need to be considered.  This is one basic way:
 
-```{r maxent eval=F}
+```{r maxent, eval=F}
 mx1 <- maxent(x=dplyr::select(fitdata,-X,-Y,-Z,-pres),
              p=as.numeric(fitdata$oct_pres),
     args=c(
@@ -290,11 +289,10 @@ p1=d%>%
 
 3D plot of relative habitat suitability.  Areas in red are more suitable.
 
-```{r}
+```{r, eval=F}
 #nColors <- 10
 #cols <- as.character(cut(p1$pred,breaks=nColors,labels= rainbow(nColors)))
-
-scatter3D(d$X, d$Y, d$Z,colvar = log(p1$pred+1),
+  scatter3D(d$X, d$Y, d$Z,colvar = log(p1$pred+1),
           bty = "g", cex=.01,theta = 100, phi = 0)
 
 ```

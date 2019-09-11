@@ -21,12 +21,12 @@ fdist <- function(x1,x2,y1=NULL, y2=NULL, z1=NULL, z2=NULL){
 
 
 angle3D=function(x1,x2=NULL,x3=NULL,x4=NULL,x5=NULL,x6=NULL,x7=NULL,x8=NULL,x9=NULL){
-  if(is.vector(x1)) {
+  if(length(x1)==9) {
     a=x1[1:3]
     b=x1[4:6]
     c=x1[7:9]
   }
-  if(is.scalar(x1)){
+  if(length(x1)==1){
     a=c(x1,x2,x3)
     b=c(x4,x5,x6)
     c=c(x7,x8,x9)
