@@ -39,16 +39,16 @@ pts$hole=pts$dist*pts$sign
 pts$gcs=pts$gc*pts$sign
 
 pts=mutate(pts,class=case_when(
-  classn ==  2   ~ "ground",
-  classn ==  3   ~ "coral",
-  classn ==  4   ~ "octocoral",
-  classn ==  5   ~ "sponge",
-  classn ==  6   ~ "rock_igneous",
-  classn ==  9   ~ "ocr",
-  classn ==  11 ~ "scr",
-  classn ==  15 ~ "rock",
-  classn ==  17 ~ "algae",
-  classn ==  18 ~ "sand",
+  class ==  2   ~ "ground",
+  class ==  3   ~ "coral",
+  class ==  4   ~ "octocoral",
+  class ==  5   ~ "sponge",
+  class ==  6   ~ "rock_igneous",
+  class ==  9   ~ "ocr",
+  class ==  11 ~ "scr",
+  class ==  15 ~ "rock",
+  class ==  17 ~ "algae",
+  class ==  18 ~ "sand",
   TRUE          ~  "other"
 ))
 
@@ -138,7 +138,7 @@ occ=read_sf("tempdata/ect110r_rec.shp")%>%
   #filter(NAME%in%paste0("test",c(1,2,9,10,4,5,6,11,14,15,17,18,19,20,21))) # keep only hole-dwellers if desired
 
 ### Match points to faces of the mesh
-pts_occ=pts%>%filter(class%in%c("ocr"))%>%
+pts_occ=pts%>%filter(classn%in%c("ocr"))%>%
   st_as_sf(coords=c("x","y","z"))%>%
   st_set_crs(proj)
 
