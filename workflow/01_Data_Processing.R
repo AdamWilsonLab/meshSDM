@@ -1,6 +1,6 @@
 source("workflow/00_setup.R")
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
+library(rgdal)
 # Overall Workflow
 #
 # Agisoft
@@ -25,7 +25,6 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 # * Import to R
 # * Compute the 3d angle from each point to 1) it's 'smoothed' point and 2) the normal vector for that point.
 # * Compute the distance from each point to it's smoothed surface in 3d space
-# * If the angle is greater than 90, make the distance negative (a "hole").  If less - it stays positive and is a 'hill'.
 
 
 # Cloud Compare Command line
@@ -87,8 +86,8 @@ rfiles=data.frame(
 files=left_join(cfiles,rfiles,by="quad")
 
 
-files=files%>%
-  na.omit(files)
+#files=files%>%
+#  na.omit(files)
 
 
 #files_long=gather(files,scale,file,-quad,-rpath)
@@ -240,7 +239,7 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
                                     "Z_smooth_50",
                                     "Nx","Ny","Nz")],1,angle3D)
 
-                    env$angle_20=apply(env[,c("X","Y","Z",
+          env$angle_20=apply(env[,c("X","Y","Z",
                                     "X_smooth_20",
                                     "Y_smooth_20",
                                     "Z_smooth_20",
@@ -289,24 +288,31 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
           # add coordinates back to data
           env[,c("X","Y","Z")]=st_coordinates(env)
 
-          if(F) save(env,file="test.Rdata")  #temporary save for debugging.
+          if(F) {
+            save(env,file="test.Rdata")  #temporary save for debugging.
+            load("test.Rdata")
+          }
 
           ##########################################
           ## Merge with recruit data
           message(paste("################# Importing recruit data for quad: ",f$quad))
 
+          if(is.na(f$rpath)){  # if there are no recruit data, just retun the env data.
+            d=obs
+          }
+
+          if(!is.na(f$rpath)){ # if recruit shapefile exists, process it.
           # union points and polygons
-          rec1<-read_sf(f$rpath)
+          #rec1<-read_sf(f$rpath,crs=proj)  # was failing with projection error for quad ect110r
+          rec1=st_as_sf(readOGR(f$rpath),crs=proj)
 
           #
           env_rec=env%>%filter(class%in%c("ocr","scr"))
-
 
           rec_bbox=st_bbox(rec1)
           rec_env=st_bbox(env_rec)
 
           shift=abs(round(rec_bbox-rec_env)[1:2])
-
           crd <- st_geometry(rec1)+shift  # shift recruit coordinates by 1 to account for "global shift/scale" in cloudcompare
 
           rec=rec1%>%
@@ -324,17 +330,11 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
             ggplot(rec,aes(color=id))+
               geom_sf()
           }
-          # Merge points and polygons
-          #rec_int=st_intersection(rec,env)%>%
-          #  mutate(pres=1)%>%
-          #  group_by(FID)
 
 
 
           # link markers with dense point cloud
           # replace with st_nearest_feature?
-
-          ## Update below to use 3d fdist function.
 
           tid=st_distance(env_rec,rec)%>%
             apply(1,which.min)
@@ -343,19 +343,39 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
           env_rec$nid=rec$nid[tid]
           env_rec$taxa=rec$taxa[tid]
 
+
           if(F){
-            library(rgl)
+             library(plotly)
             ## Extract and explore tori
             obs_torus=env_rec%>%
               group_by(rec,taxa, class)%>%
-              summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats - others?
+              summarize(r_n=n(),r_z=diff(range(Z)),r_area=diff(range(X))*diff(range(Y)))%>%  #calculate recruit stats
               group_by(rec,taxa,class, r_n, r_z, r_area)%>%
-              do(torus(.,env,dist=0.005))
+              do(torus(.,env,dist=0.005))%>%
+              filter(type!="background")
 
-            obs_torus$col=factor(obs_torus$type,labels=c("black","red","green"))
-            table(obs_torus$rec)
-            td=obs_torus#filter(obs_torus,rec=="agar2")
-            points3d(as.matrix(td[,c("X","Y","Z")]),color=as.character(td$col))#,col=dist)
+#            obs_torus$col=factor(obs_torus$type,labels=c("black","red","green"))
+#            table(obs_torus$rec,obs_torus$class)
+
+            ggplot(obs_torus,aes(x=X,y=Y,z=Z,col=as.factor(type)))+
+              geom_point()+
+              facet_wrap(~rec,scales="free")
+#              geom_sf(data=rec,inherit.aes = T)
+
+            for(r in unique(obs_torus$rec)){  #loop over recruits and write out an html interactive graphic
+                p <- plot_ly(filter(obs_torus,rec==r), x = ~X, y = ~Y, z = ~Z,
+                         color = ~class, colors = c("green","grey","red","blue"),
+                 size=I(1))%>%
+                 layout(title=paste0(f$quad,"_",r)) %>%
+                add_markers()
+
+                plotly_filename=file.path("img/rec",paste0(f$quad,"_",r,".html"))
+                htmlwidgets::saveWidget(as_widget(p),
+                                        file=file.path(normalizePath(dirname(plotly_filename)),basename(plotly_filename)),
+                                        libdir="lib",
+                                        title=paste0(f$quad,"_",r))
+                }
+
           }
 
 
@@ -371,6 +391,8 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
             do(torus(.,env,dist=0.005,fun=median))%>% # Summarize env in the torus
             mutate(pres=1)
 
+          Sys.setenv(GDAL_DATA="/usr/share/gdal/gcs.csv")
+
           if(F){
             ggplot(obs,aes(col=as.factor(taxa)))+
               geom_sf()+
@@ -381,8 +403,10 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
           #   st_set_geometry(obs,NULL),
           #   st_set_geometry(env,NULL)
           # )
-
           d=bind_rows(obs,mutate(env,pres=0))
+      } # end if recruit shapefile
+
+
           d$quad=f$quad  # add quad id to table
 
           d$class=as.factor(d$class)
@@ -397,9 +421,25 @@ proc_report=foreach(i=1:nrow(files),  # parallel loop over quadrats
           # Save Data
           message(paste("################# Saving data for quad: ",f$quad))
 
+          # reorganize columns for easier opening with cloudcompare.
+          d2=d%>%
+            ungroup()%>%
+            dplyr::select(
+              X,Y,Z,Nx,Ny,Nz,
+              contains("X"),    contains("Y"),    contains("Z"),
+              -Bf,-Gf,-Rf,-r_n,-r_z,-geometry,
+              contains("angle"),
+              contains("sign"),
+              contains("smooth"),
+              contains("rough"),
+              contains("slope"),
+              contains("dist"),
+              contains("aspect"),
+              contains("gc"),
+              r_area,Ny,Nx,Nz) # remove extras
 
-          save(d,file=outputfile_rdata)
-          d%>%
+          save(d2,file=outputfile_rdata)
+          d2%>%
             dplyr::select(-geometry)%>%
             write_csv(path=outputfile_csv)
 

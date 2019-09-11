@@ -34,7 +34,7 @@ This reads in the data object created with Data_Processing.Rmd.
 
 ```{r loaddata}
 dataversion="20190128"
-load(file.path("data",dataversion,"multi_quad_sample.Rdata"))
+load("data/20190415/all_quads_20190415_10000.Rdata")
 ```
 ### Data Description
 
@@ -52,10 +52,10 @@ See Data_Processing.Rmd for the code.
 
 Gather data to 'long' (e.g. tidy) form for easier plotting with ggplot.
 ```{r meltdata}
-d=poolquad
+d=sample_all_quads
 
 # Transform to 'long' format for easier ggplotting, etc.
-dl=poolquad%>%
+dl=d%>%
   ungroup()%>%
   gather(key=var,
                  value = val,-quad,-X,-Y,-Z,-id,-taxa,-class,
@@ -79,7 +79,7 @@ my_bin <- function(data, mapping, ..., low = "#132B43", high = "red") {
 
 d%>%
   ungroup()%>%
-  dplyr::select(contains("rough"),contains("hole"),contains("gcs"))%>%
+  dplyr::select(contains("rough"),contains("hole"),contains("gcs"),contains("density"))%>%
   ggpairs(lower = list(continuous = my_bin))
 ```
 
