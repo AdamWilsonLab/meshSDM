@@ -1,5 +1,6 @@
 # explore a hybrid mesh-point approach
-devtools::load_all(".")
+devtools::load_all(".", reset=F)
+
 library(tidyverse)
 library(Morpho)
 library(Rvcg)
@@ -9,47 +10,102 @@ library(viridis)
 library(colourvalues)
 library(sf)
 library(foreach)
+library(doParallel)
+registerDoParallel(30)
 
-
+## Other settings / parameters
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+mcoptions <- list(preschedule=FALSE, set.seed=FALSE)
+dataversion="20190415"  #folder to look for quad data
+outputdir=file.path("rawdata",dataversion,"output")
 
-point_cloud_files=c("tempdata/ect110r_subsampled_5.txt")
-point_cloud_file=c("tempdata/ect110r_subsampled_5.txt")
+# find all quads
+qfiles=data.frame(
+  mesh_path=list.files(file.path("rawdata",dataversion),
+                  pattern=".*mesh[.]ply",recursive = T, full=T),
+  stringsAsFactors = F)%>%
+  mutate(
+    fname=basename(mesh_path),
+    quad=sub("_mesh.*","",fname))%>%
+  dplyr::select(-fname)
 
-mesh_file="tempdata/ect110r.ply"
-occurrence_file="tempdata/ect110r_rec.shp"
+# find all points
+cfiles=data.frame(
+  point_path=list.files(file.path("rawdata",dataversion),
+                  pattern=".*subsampled_.*txt",recursive = T, full=T),
+  stringsAsFactors = F)%>%
+  mutate(
+    fname=basename(point_path),
+    quad=sub("_subsampled_.*","",sub("[.]txt","",fname)),
+    scale=paste0("s_",sub("^.*_subsampled_","",sub("[.]txt","",fname)))
+  )%>%
+  dplyr::select(-fname)
 
-#process_all<-function(id,point_cloud_files,mesh_file,point_file){
-  pts_long=foreach(point_cloud_file=point_cloud_files,
-                   .combine=bind_rows # multiple scales will be rbinded
-                   )%do%{
-                      pts=process_point_cloud(
-                        point_cloud_file,
-                        id, #quadrat id
-                        scale=5, # scale id
-                        offset=1) # offset to shift coordinates to align points and mesh
-  }
 
-  # reshape points to wide format
-  # (one column for each variable in each scale - one row for each point)
+# find all shapefiles
+rfiles=data.frame(
+  occurrence_path=list.files(file.path("rawdata",dataversion),
+                   pattern=".*rec.*shp",recursive = T, full=T),
+  stringsAsFactors = F)%>%
+  mutate(
+    fname=basename(occurrence_path),
+    quad=sub("_rec.*$","",fname))%>%
+  dplyr::select(-fname)
 
-  pts_wide=pts_long%>%
-    mutate(variable=paste(variable,scale,sep="_"))%>%
-    spread("variable","value")
+# check all quads are in rfiles and cfiles
+#all(rfiles$quad%in%cfiles$quad)
+#all(cfiles$quad%in%rfiles$quad)
+#cfiles$quad[!cfiles$quad%in%rfiles$quad]
+#grep("eut135r",rfiles$quad)
+
+files=cfiles%>%
+  left_join(rfiles,by="quad")%>%
+  left_join(qfiles,by="quad")%>%
+  select(quad,scale,point_path,mesh_path,occurrence_path)%>%
+  mutate(output_path=file.path(outputdir,paste0(quad,"_",sub("s_","",scale),".rds")))
+
+
+# point_cloud_files=c("tempdata/ect110r_subsampled_5.txt")
+# point_cloud_file=c("tempdata/ect110r_subsampled_5.txt")
+# mesh_file="tempdata/ect110r.ply"
+# occurrence_file="tempdata/ect110r_rec.shp"
+
+
+loop_output=foreach(i=1:nrow(files),
+                 .combine=bind_rows, #rbind the summary table
+                 .errorhandling = "remove",  # remove quads with errors
+                 .inorder=F,
+                 .packages=c("colourvalues")
+                 ) %dopar%{
+
+f=files[i,]
+devtools::load_all(".", reset=F)
+
+pts=process_point_cloud(
+    path=f$point_path,
+    id=f$quad,
+    scale=f$scale,
+    offset=1) # offset to shift coordinates to align points and mesh
+
 
 #############################
 ## Import, process mesh
 ## Returns mesh with attached attributes
-mesh=process_mesh(mesh_file,pts,mesh_tol=0.001,attach_points=T)
+mesh=process_mesh(f$mesh_path,pts,mesh_tol=0.001,attach_points=T)
 
 ##########################################
 ####  Extract data for occurrence points
 ## link occurrence points with the mesh and update the attribute table
-mesh2 = process_occurrences(occurrence_file,mesh,class="ocr")
+mesh_ocr = process_occurrences(f$occurrence_path,mesh,pts,class="ocr",proj=proj)
+mesh_scr = process_occurrences(f$occurrence_path,mesh,pts,class="scr",proj=proj)
+
+
+mesh$data$pres_ocr=mesh_ocr$data$pres_adj
+mesh$data$pres_scr=mesh_scr$data$pres_adj
 
 
 if(F) {
-  shade3d_var(mesh,faces_data$pres_torus,palette = "magma")
+  shade3d_var(mesh2,mesh$data$pres_torus,palette = "magma")
   shade3d_var(mesh,faces_data$pres)
 }
 
@@ -58,10 +114,18 @@ if(F) {
 if(F) hist(mesh$data$n_points,breaks = 100)
 
 
-save(mesh,file="tempdata/mesh.Rdata")
+
+saveRDS(mesh,file=f$output_path)
+}
+
+
+
 
 ##########################################
-load("tempdata/mesh.Rdata")
+
+mesh=readRDS("rawdata/20190415/output/eut27l_10.rds")
+shade3d_var(mesh,mesh$data$pres_torus,palette = "magma")
+
 
 ## Maxent
 library(maxnet)
@@ -74,14 +138,14 @@ model_data=bind_rows(
 )
 
 m1=maxnet(p=model_data$pres_adj,
-       data=model_data%>%
-         select(angle_median,
-                sign_median,
-                rough_median,
-                dist_median,
-#                slope_median, # include desired variables here
-                hole_q25
-               ))
+          data=model_data%>%
+            select(angle_median,
+                   sign_median,
+                   rough_median,
+                   dist_median,
+                   #                slope_median, # include desired variables here
+                   hole_q25
+            ))
 
 plot(m1,type="logistic")
 
@@ -96,7 +160,7 @@ predict_data2=left_join(mesh$data,cbind(predict_data,m1pred=m1_predict),by="fid"
 
 if(F) {
   shade3d_var(mesh,predict_data2$m1pred, palette="magma")
-#  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
+  #  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
   points3d(mesh$data[mesh$data$pres_adj==1,c("x","y","z")],col="red",size=10) #matched face for each
 }
 
@@ -111,7 +175,18 @@ if(F) {
   #  points3d(st_coordinates(pts_occ),col="blue",size=10) #classified points
   points3d(pts[,c("x","y","z")],size=.05,col="darkblue",
            alpha=rescale_mid(pts$x,c(1,0),mid=.01),add=T)   #points3d(mesh$data[,c("x","y","z")],size=.1) #matched face for each
-}
+
+  summary_table=data.frame(
+    quad=f$quad,
+    points=nrow(mesh$data),
+    occurrences=sum(mesh$data$pres_adj),
+    n_faces=ncol(mesh$vb))
+
+  print(summary_table)
+
+  return(summary_table)
+
+  }
 
 ###########################################
 ## plots

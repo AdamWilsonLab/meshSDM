@@ -1,6 +1,6 @@
-process_point_cloud<-function(point_cloud_file,id,scale=NULL,offset=0){
+process_point_cloud<-function(path,id,scale=NULL,offset=0){
 
-  pts=read_csv(point_cloud_file)%>%
+  pts=read_csv(path)%>%
     slice(-1)%>%
     cleancols()%>%
     mutate(x=x-offset, #use offset to shift coordinates
@@ -42,11 +42,11 @@ process_point_cloud<-function(point_cloud_file,id,scale=NULL,offset=0){
   pts$id=id
 
 #  gather to long format for easier appending
-  pts_long=pts%>%
-    gather(key="variable",
-           value = "value",
-           -x,-y,-z,-r,-g,-b,-fid,-id,-scale,-class)# these columns will not be gathered
-
+  # pts_long=pts%>%
+  #   gather(key="variable",
+  #          value = "value",
+  #          -x,-y,-z,-r,-g,-b,-fid,-id,-scale,-class)# these columns will not be gathered
+  #
   ## rename to add scale to column names
 #  if(!is.null(scale))
 #    rename_at(pts, c(vars(-c(1:7,grep("class$",colnames(pts))))),

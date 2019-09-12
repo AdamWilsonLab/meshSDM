@@ -1,4 +1,4 @@
-mesh_median <- function (fids, data, return=c("values","index")){
+mesh_median <- function (fids, data, return=c("values","index"),...){
   # confirm the fid column exists
     if(!"fid" %in% names(data)) stop("data does not include an 'fid' column")
   # subset the faces data to include only faces for this fid
@@ -10,7 +10,7 @@ mesh_median <- function (fids, data, return=c("values","index")){
     fdata_median <-
       fdata%>%
       select(-fid)%>%  # don't include the fid in the distance calculation
-      depth::med(method="Tukey",approx = T, nstp = 1000)
+      depth::med(method="Tukey",approx = T, ...)
 
 
   # calculate distance from each face to the median and
