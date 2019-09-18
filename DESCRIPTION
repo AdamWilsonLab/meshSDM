@@ -1,17 +1,17 @@
 Package: CoralSDM
 Type: Package
-Title: What the Package Does (Title Case)
+Title: 3 Dimensional Species Distribution Models
 Version: 0.1.0
-Author: Who wrote it
+Author: Adam M. Wilson <adamw@buffalo.edu>
 Maintainer: Adam M. Wilson <adamw@buffalo.edu>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Built to process fine grain (~1mm resolution) topographic meshes
+    of coral reef environments and prepare data for distribution modelling using
+    models such as Maxent.
 License: MIT
 Encoding: UTF-8
 LazyData: true
 Imports:
     tidyverse,
-    Morpho,
     Rvcg,
     rgl,
     scales,

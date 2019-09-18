@@ -10,7 +10,8 @@ mesh_median <- function (fids, data, return=c("values","index"),...){
     fdata_median <-
       fdata%>%
       select(-fid)%>%  # don't include the fid in the distance calculation
-      depth::med(method="Tukey",approx = T, ...)
+      select_if(is_numeric)%>% #drop non-numeric values
+      depth::med(method="Spatial",approx = T, ...)
 
 
   # calculate distance from each face to the median and
