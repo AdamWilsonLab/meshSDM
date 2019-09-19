@@ -62,7 +62,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
 
   visible_vid=getVisibleVertices(mesh, mesh_centroid[1:3], cores = 1)
   # get vector of T/F whether you can see each face
-  mesh$data$visible=1:nfaces(mesh)%in%getFaces(mesh,visible_vid)
+  faces_data$visible=1:nfaces(mesh)%in%getFaces(mesh,visible_vid)
 
 
   # attach data to mesh object

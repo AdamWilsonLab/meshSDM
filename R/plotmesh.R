@@ -1,7 +1,17 @@
+# https://plot.ly/r/reference/#mesh3d
+# https://plot.ly/r/3d-mesh/
+# https://plot.ly/r/trisurf/
+# https://laustep.github.io/stlahblog/posts/plotly_trisurf.html
+
+
 plotmesh=function(mesh,col=NULL,ramp=NULL, ...){
 
   require(plotly)
   require(tidyverse)
+
+  # Check if mesh is mesh
+  # Check if col is vector same size as mesh
+  # check if ramp is a color ramp function
 
   if(is.null(ramp))
     ramp=colour_ramp(viridis::viridis(100,option="inferno"))
