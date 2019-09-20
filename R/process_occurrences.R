@@ -1,13 +1,26 @@
 process_occurrences<-function(occurrence_file,mesh,pts,class="ocr",proj){
 
+  # If occurrence file is missing, return all 0s
+  if(is.null(occurrence_file)) {
+    mesh$data$pres_adj=0
+    mesh$data$pres_torus=0
+    return(mesh)
+  }
+
+
   occ=read_sf(occurrence_file)%>%
   filter(grepl(class,NAME))%>%
   st_set_crs(NA)%>%
   st_set_crs(proj)%>%
   mutate(oid=1:n())#%>%
 
+# If no records of this class, add all zeros and return
+  if(nrow(occ)==0) {
+    mesh$data$pres_adj=0
+     return(mesh)
+  }
 ### Match points to faces of the mesh
-pts_occ=pts%>%filter(class%in%class)%>%
+pts_occ=pts[pts$class==as.character(class),]%>%
   st_as_sf(coords=c("x","y","z"))%>%
   st_set_crs(proj)
 
@@ -61,11 +74,10 @@ select(
   na.omit()
 
 
-
 # 2: Now calculate the median and return the fid of the face closest to that median for each recruit
 pts_fid_torus <- pts_fid_all%>%
   group_by(name)%>% # group by name to do calculation for each recruit
-  do(mesh_adj(fids=.$fid,mesh=mesh,type=c("border")))  #identify border faces
+  do(mesh_adj(fids=.$fid,mesh=mesh,type=c("border")))  #identify border faces that make up the torus (ring of faces around the recruit)
 
 # add these fids to the data table.
 mesh$data$pres_torus=ifelse(mesh$data$fid%in%pts_fid_torus$fid,1,0)
@@ -75,8 +87,6 @@ pts_fid_adj=pts_fid_torus%>%
 
 # add these fids to the attribute table.
 mesh$data$pres_adj=ifelse(mesh$data$fid%in%pts_fid_adj$fid,1,0)
-#mesh2=mesh
-#mesh2$data=faces_data
 
 return(mesh)
 

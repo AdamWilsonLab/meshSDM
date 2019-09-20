@@ -46,6 +46,12 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
     mutate(class_percent=class_percent/sum(class_percent)*100)%>%
     spread(class,class_percent,fill = 0)
 
+  # also add a single class for each face from the majority class
+#  faces_data_class<-pts %>%
+#    group_by(fid)%>%
+#  summarize(class=%>%
+
+
   #  join the processed point data to the faces data
   #  This faces_data table holds all the environmental data for the mesh
   faces_data <- left_join(faces,faces_data_all,by="fid")%>%
@@ -59,7 +65,6 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
   mesh_centroid=apply(mesh$vb,1,range)%>%
     apply(2,function(x) (x[2]-x[1])/2)+
     c(0,0,2,0)  # then add some distance in z (like a camera above the surface)
-
   visible_vid=getVisibleVertices(mesh, mesh_centroid[1:3], cores = 1)
   # get vector of T/F whether you can see each face
   faces_data$visible=1:nfaces(mesh)%in%getFaces(mesh,visible_vid)

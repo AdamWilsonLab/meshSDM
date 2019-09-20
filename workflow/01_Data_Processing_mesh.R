@@ -99,8 +99,12 @@ loop_output=foreach(i=1:nrow(files),
   mesh_scr = process_occurrences(f$occurrence_path,mesh,pts,class="scr",proj=proj)
 
 
+  ## Add them to the mesh data object
   mesh$data$pres_ocr=mesh_ocr$data$pres_adj
+  mesh$data$pres_ocr_torus=mesh_ocr$data$pres_torus
+
   mesh$data$pres_scr=mesh_scr$data$pres_adj
+  mesh$data$pres_scr_torus=mesh_scr$data$pres_torus
 
 
   if(F) {
