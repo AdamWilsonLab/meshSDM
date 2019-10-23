@@ -5,3 +5,6 @@
 data/
 *cache*
 *nohup*
+output/
+rawdata/
+img/

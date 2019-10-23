@@ -34,7 +34,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
   faces_data_all <- pts%>%
     group_by(fid)%>%
     select(-x,-y,-z)%>% # don't take median of the coordinates
-    summarize_if(is.numeric,median)%>%
+    summarize_if(is.numeric,median, na.rm=T)%>%
     mutate(scale=pts$scale[1],id=pts$id[1]) #add metadata back to dataset
 
   # generate percentage of points in each class for each face
@@ -46,7 +46,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
     mutate(class_percent=class_percent/sum(class_percent)*100)%>%
     spread(class,class_percent,fill = 0)
 
-  # also add a single class for each face from the majority class
+# also add a single class for each face from the majority class
 #  faces_data_class<-pts %>%
 #    group_by(fid)%>%
 #  summarize(class=%>%
