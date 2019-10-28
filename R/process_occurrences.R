@@ -86,7 +86,11 @@ pts_fid_adj=pts_fid_torus%>%
   do(mesh_median(.$fid, data=tdata, return=c("index"),nstp = 2000)) # find median face in border
 
 # add these fids to the attribute table.
-mesh$data$pres_adj=ifelse(mesh$data$fid%in%pts_fid_adj$fid,1,0)
+#mesh$data$pres_adj=ifelse(mesh$data$fid%in%pts_fid_adj$fid,1,0)
+
+# join the tables to keep the recruit id in the "pid" column for later merging across scales.
+mesh$data<-left_join(mesh$data,pts_fid_adj,by="fid") %>%
+  rename("pid"="name")
 
 return(mesh)
 

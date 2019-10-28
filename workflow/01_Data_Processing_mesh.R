@@ -16,7 +16,7 @@ devtools::load_all(".", reset=F)
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 mcoptions <- list(preschedule=FALSE, set.seed=FALSE)
 dataversion="20190415"  #folder to look for quad data
-outputdir=file.path("rawdata",dataversion,"output")
+outputdir=file.path("output/data/quad_scale")
 
 # find all quads
 qfiles=data.frame(
@@ -65,9 +65,10 @@ files=cfiles%>%
 
 
 # point_cloud_files=c("tempdata/ect110r_subsampled_5.txt")
-# point_cloud_file=c("tempdata/ect110r_subsampled_5.txt")
 # mesh_file="tempdata/ect110r.ply"
 # occurrence_file="tempdata/ect110r_rec.shp"
+
+
 i=1
 
 loop_output=foreach(i=1:nrow(files),
@@ -92,31 +93,24 @@ loop_output=foreach(i=1:nrow(files),
   ## Returns mesh with attached attributes
   mesh=process_mesh(mesh_file=f$mesh_path,pts,mesh_tol=0.001)
 
+
   ##########################################
   ####  Extract data for occurrence points
   ## link occurrence points with the mesh and update the attribute table
-  mesh_ocr = process_occurrences(f$occurrence_path,mesh,pts,class="ocr",proj=proj)
+  mesh_ocr = process_occurrences(occurrence_file=f$occurrence_path,mesh=mesh,pts=pts,class="ocr",proj=proj)
   mesh_scr = process_occurrences(f$occurrence_path,mesh,pts,class="scr",proj=proj)
 
 
   ## Add them to the mesh data object
-  mesh$data$pres_ocr=mesh_ocr$data$pres_adj
+  mesh$data$pres_ocr=mesh_ocr$data$pid
   mesh$data$pres_ocr_torus=mesh_ocr$data$pres_torus
 
-  mesh$data$pres_scr=mesh_scr$data$pres_adj
+  mesh$data$pres_scr=mesh_scr$data$pid
   mesh$data$pres_scr_torus=mesh_scr$data$pres_torus
-
-
-  if(F) {
-    plotmesh(mesh,mesh$data$coral)
-    plotmesh(mesh,mesh$data$pres_ocr)
-  }
 
 
   # number of points in each polygon
   if(F) hist(mesh$data$n_points,breaks = 100)
-
-
 
   saveRDS(mesh,file=f$output_path)
 

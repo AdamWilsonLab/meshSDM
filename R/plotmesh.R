@@ -4,7 +4,7 @@
 # https://laustep.github.io/stlahblog/posts/plotly_trisurf.html
 
 
-plotmesh=function(mesh,col=NULL,ramp=NULL, ...){
+plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
 
   require(plotly)
   require(tidyverse)
@@ -28,7 +28,10 @@ plotmesh=function(mesh,col=NULL,ramp=NULL, ...){
     name="test name",
     facecolor = colors,
     colorscale="YlOrRd",
-    type = "mesh3d") %>%
+    type = "mesh3d",
+    colorbar=list(
+      title=ifelse(is.null(title),"",title))
+    ) %>%
     layout(scene = list(aspectmode = "data"))
 }
 
