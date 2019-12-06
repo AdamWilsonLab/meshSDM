@@ -3,10 +3,11 @@ library(Morpho)
 library(Rvcg)
 library(scales)
 library(viridis)
+devtools::load_all(".")
 
 ### load the combined data
-datal<-readRDS("output/datalong.rds")
-dataw<-readRDS("output/datawide.rds")
+datal<-readRDS("output/data/datalong.rds")
+dataw<-readRDS("output/data/datawide.rds")
 
 
 ############
@@ -52,7 +53,9 @@ meshfiles=data.frame(
 
 # percent missing by variable
 
-summary_nas <- datal%>%group_by(var,scale)%>%summarize(n=n(),na=sum(is.na(value)),p=na/n)
+datal%>%group_by(var,scale)%>%
+  summarize(n=n(),na=sum(is.na(value)),p=na/n) %>%
+  arrange(desc(na))
 
 
 ##############################################################
@@ -63,7 +66,7 @@ library(maxnet)
 # could modify to have some number in each quad to ensure it's balanced
 n_background=10000
 
-model_vars=c("hole_5","hole_10","hole_100","rough_5","rough_10")
+model_vars=c("hole_5","hole_10","hole_100","slope_10","rough_5","rough_10", "rough_20","coral","sponge","rock","sand")
 pres_vars=c("pres_scr","pres_ocr","pres")
 
 dataw<-dataw %>%
@@ -86,7 +89,10 @@ data=select(model_data,model_vars) %>% as.data.frame()
 
 #data[is.na(data)]=0
 
-m1=maxnet(p,data,maxnet.formula(p, data, classes="lq"))
+m1=maxnet(p,data,
+          maxnet.formula(p, data, classes="lqph"), #adjust this to change which type of features are used.
+          regmult=3 # adjust this to put more 'tension' on the fit to reduce overfitting and make it more interpretable
+          )
 
 plot(m1,type="logistic")
 
@@ -98,35 +104,81 @@ predict_data<-
   select(quad,fid,model_vars) %>%
   na.omit()
 
-predict_suitability=predict(m1,newdata=predict_data,type="logistic",clamp=F) %>% as.vector()
+predict_suitability=predict(m1,newdata=predict_data,
+                            type="logistic",clamp=F) %>%
+  as.vector()
 
 # then join back by quad and fid to be sure everything lines up)
-predict_results=left_join(dataw,bind_cols(predict_data,suitability=predict_suitability),by=c("quad","fid"))
+predict_results=left_join(dataw,
+                          bind_cols(
+                            select(predict_data,quad,fid),
+                            suitability=predict_suitability),
+                          by=c("quad","fid")) %>%
+  mutate(site=substr(quad,1,2),
+        bio=(coral+sponge+ocr+scr)>20,
+        suitability_nobio=ifelse(bio,0,suitability))
 
 
-# suitability by quad
+# environment by quad
 ggplot(predict_results, aes(x=quad,y=hole_10))+
   geom_boxplot()+
   coord_flip()
 
+# suitability by quad
 ggplot(predict_results, aes(x=quad,y=suitability))+
   geom_boxplot()+
   coord_flip()
 
 
+ggplot(predict_results, aes(x=substr(quad,1,3),y=suitability))+
+  geom_boxplot()
+
+ggplot(predict_results, aes(x=substr(quad,1,3),y=coral>100))+
+  geom_boxplot()
+
+## Summary tables
+predict_results %>%
+  group_by(quad) %>%
+  mutate(suit=suitability>0.8) %>%
+  summarize(
+    suitability=mean(suitability,na.rm=T),
+    coral=mean(coral,na.rm=T),
+    sponge=mean(sponge,na.rm=T),
+    rock=mean(rock,na.rm=T),
+    bio=mean(coral+sponge+ocr+scr,na.rm=T),
+    sand=mean(sand,na.rm=T),
+    rough_10=mean(rough_10,na.rm=T),
+    rough_5=mean(rough_5,na.rm=T))
+
+## Summary tables
+predict_results %>%
+  mutate(bio=(coral+sponge+ocr+scr)>0.2) %>%
+  group_by(site,bio) %>%
+  summarize(
+    suitability=mean(suitability,na.rm=T),
+    rough_20=mean(rough_20,na.rm=T),
+    rough_10=mean(rough_10,na.rm=T),
+    rough_5=mean(rough_5,na.rm=T))
+
+
 # put predictions back on a particular landscape:
 quad="eut49r"  #choose which quad
+quad="ect14l"  #choose which quad
 
 mesh=meshfiles$mesh_path[meshfiles$quad==quad] %>% readRDS()
 
 # then join back with predict_results by fid and quad to be sure everything lines up)
 mesh_predict=left_join(mesh$data, # pull data from mesh object
                        select(predict_results,quad,fid,suitability), # keep only these columns for merging
-                       by=c("quad","fid")) %>% arrange(fid)
+                       by=c("quad","fid")) %>% arrange(fid) %>%
+  mutate(bio=(coral+sponge+ocr+scr)>0.2,
+         suitability_nobio=ifelse(bio,0,suitability))
+
 
 # plot the predicted suitability on the mesh
 plotmesh(mesh,
-         mesh_predict$suitability, # the column to use to color mesh
+#         mesh_predict$hole_10, # the column to use to color mesh
+         mesh_predict$suitability_nobio, # the column to use to color mesh
          title="Suitability")
 
 
