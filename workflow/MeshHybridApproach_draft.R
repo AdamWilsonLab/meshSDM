@@ -13,8 +13,8 @@ library(sf)
 proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 
-pts=read_csv("tempdata/ect110r_subsampled_5.txt")%>%
-#pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_10.txt")%>%
+#pts=read_csv("tempdata/ect110r_subsampled_5.txt")%>%
+pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_10.txt")%>%
   slice(-1)%>%
   cleancols()%>%
   mutate(x=x-1,
