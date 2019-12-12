@@ -11,6 +11,7 @@ dataw<-readRDS("output/data/datawide.rds")
 
 
 ############
+if(F){
 datal %>%
   filter(var%in%c("rough","hole","gcs","aspect","slope","visible")) %>%
   ggplot(aes(x=as.factor(pres_ocr),y=value))+
@@ -26,7 +27,7 @@ datal %>%
 
 
 dataw %>% filter(!is.na(pres_ocr))%>% group_by(visible) %>% summarize(n=n())
-
+}
 ### Mesh files
 ## Build file list
 meshfiles=data.frame(
@@ -148,7 +149,8 @@ predict_results %>%
     bio=mean(coral+sponge+ocr+scr,na.rm=T),
     sand=mean(sand,na.rm=T),
     rough_10=mean(rough_10,na.rm=T),
-    rough_5=mean(rough_5,na.rm=T))
+    rough_5=mean(rough_5,na.rm=T)) %>%
+  arrange(desc(rock))
 
 ## Summary tables
 predict_results %>%
@@ -164,7 +166,7 @@ predict_results %>%
 # put predictions back on a particular landscape:
 quad="eut49r"  #choose which quad
 quad="ect14l"  #choose which quad
-
+quad="ect210r"
 mesh=meshfiles$mesh_path[meshfiles$quad==quad] %>% readRDS()
 
 # then join back with predict_results by fid and quad to be sure everything lines up)
@@ -178,7 +180,7 @@ mesh_predict=left_join(mesh$data, # pull data from mesh object
 # plot the predicted suitability on the mesh
 plotmesh(mesh,
 #         mesh_predict$hole_10, # the column to use to color mesh
-         mesh_predict$suitability_nobio, # the column to use to color mesh
+         mesh_predict$suitability, # the column to use to color mesh
          title="Suitability")
 
 

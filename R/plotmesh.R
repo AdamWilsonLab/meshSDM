@@ -38,8 +38,8 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
     ids=as.character(1:ncol(mesh$it)),
     name="test name",
     facecolor = colors,
-    text=paste("Value=",round(col,2)),
-    hoverinfo = 'text',
+#    text=paste("Value=",round(col,2)),
+#    hoverinfo = 'text',
     colorscale="YlOrRd",
     type = "mesh3d",
     colorbar=list(
