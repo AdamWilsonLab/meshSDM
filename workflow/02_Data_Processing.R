@@ -9,7 +9,7 @@ library(tidyverse)
 registerDoParallel(10)
 
 
-nbg=100000  # number of background points to select from each quad
+nbg=10000  # number of background points to select from each quad
 
 dataversion="20190415"
 

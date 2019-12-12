@@ -7,3 +7,6 @@ data/
 *nohup*
 *data*
 *.png
+output/
+rawdata/
+img/

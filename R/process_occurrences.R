@@ -1,14 +1,26 @@
-process_occrrences<-function(occurrence_file,mesh,pts,class="ocr"){
+process_occurrences<-function(occurrence_file,mesh,pts,class="ocr",proj){
+
+  # If occurrence file is missing, return all 0s
+  if(is.null(occurrence_file)) {
+    mesh$data$pres_adj=0
+    mesh$data$pres_torus=0
+    return(mesh)
+  }
+
 
   occ=read_sf(occurrence_file)%>%
-#  filter(grepl("ocr",NAME))%>%
-  #  occ=read_sf("tempdata/3d_tile/3DTILES.data/OcTiles.shp")%>%
+  filter(grepl(class,NAME))%>%
   st_set_crs(NA)%>%
   st_set_crs(proj)%>%
   mutate(oid=1:n())#%>%
 
+# If no records of this class, add all zeros and return
+  if(nrow(occ)==0) {
+    mesh$data$pres_adj=0
+     return(mesh)
+  }
 ### Match points to faces of the mesh
-pts_occ=pts%>%filter(class%in%class)%>%
+pts_occ=pts[pts$class==as.character(class),]%>%
   st_as_sf(coords=c("x","y","z"))%>%
   st_set_crs(proj)
 
@@ -25,12 +37,11 @@ occ_mesh=vcgClost(x=st_coordinates(pts_occ),
 # add polygon id to pts_occ
 pts_occ$fid=occ_mesh$faceptr
 
-# identify polygons with at least one recruit point
-pts_fid_all=pts_occ%>%
-  group_by(name,fid)%>%
-  summarize(n=n())%>%
-  st_set_geometry(NULL)
-
+# count recruit point in each polygon
+ pts_fid_all=pts_occ%>%
+   group_by(name,fid)%>%
+   summarize(n=n())%>%
+   st_set_geometry(NULL)
 
 ####  Assing single 'face' for for each occurrence
 ####
@@ -39,40 +50,49 @@ pts_fid_all=pts_occ%>%
 ####  2) take donut around recruit
 
 # identify polygon with majority of recruit points
-pts_fid_max=pts_fid_all%>%
-  ungroup()%>%
-  group_by(name)%>%
-  arrange(desc(n))%>%
-  slice(1)
-
-# Method 1:
-faces_data$pres_max=ifelse(faces_data$fid%in%pts_fid_max$fid,1,0)
+# pts_fid_max=pts_fid_all%>%
+#   ungroup()%>%
+#   group_by(name)%>%
+#   arrange(desc(n))%>%
+#   slice(1)
+#
+# # Method 1:
+# faces_data$pres_max=ifelse(faces_data$fid%in%pts_fid_max$fid,1,0)
 
 # Method 2
 ## Find single face closest to the median of the recruit torus
 # 1: first create a data.frame with all the variables to include in the median calculation
 #    This needs to have one column called "fid" with the face id, and the rest of the columns
 #    will be used for the median.
-tdata=faces_data%>%
-  select(fid,angle_median,slope_median,gcs_median,
-         rough_median,rough_max,hole_median,
-         hole_min,hole_q25,sign_median,dist_median)
+tdata=mesh$data%>%
+select(
+  -starts_with("pres"))%>%
+  #        -starts_with("x"),
+  #        -starts_with("y"),
+  #        -starts_with("z"),
+  #        -starts_with(c("N")))%>%
+  na.omit()
+
+
 # 2: Now calculate the median and return the fid of the face closest to that median for each recruit
 pts_fid_torus <- pts_fid_all%>%
   group_by(name)%>% # group by name to do calculation for each recruit
-  do(mesh_adj(fids=.$fid,mesh=mesh,type=c("border")))  #identify border faces
-# add these fids to the faces_data table.
-faces_data$pres_torus=ifelse(faces_data$fid%in%pts_fid_torus$fid,1,0)
+  do(mesh_adj(fids=.$fid,mesh=mesh,type=c("border")))  #identify border faces that make up the torus (ring of faces around the recruit)
+
+# add these fids to the data table.
+mesh$data$pres_torus=ifelse(mesh$data$fid%in%pts_fid_torus$fid,1,0)
 
 pts_fid_adj=pts_fid_torus%>%
-  do(mesh_median(.$fid, data=tdata, return=c("index"))) # find median face in border
+  do(mesh_median(.$fid, data=tdata, return=c("index"),nstp = 2000)) # find median face in border
 
-# add these fids to the faces_data table.
-faces_data$pres_adj=ifelse(faces_data$fid%in%pts_fid_adj$fid,1,0)
-mesh2=mesh
-mesh2$data=faces_data
+# add these fids to the attribute table.
+#mesh$data$pres_adj=ifelse(mesh$data$fid%in%pts_fid_adj$fid,1,0)
 
-return()
+# join the tables to keep the recruit id in the "pid" column for later merging across scales.
+mesh$data<-left_join(mesh$data,pts_fid_adj,by="fid") %>%
+  rename("pid"="name")
+
+return(mesh)
 
 }
 
