@@ -13,9 +13,10 @@ LazyData: true
 Imports:
     tidyverse,
     Rvcg,
-    rgl,
     scales,
     viridis,
     colourvalues,
     sf
+Suggests: 
+    plotly
 RoxygenNote: 6.1.1

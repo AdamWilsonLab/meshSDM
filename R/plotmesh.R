@@ -9,15 +9,25 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
   require(plotly)
   require(tidyverse)
 
+  # todo:
   # Check if mesh is mesh
   # Check if col is vector same size as mesh
   # check if ramp is a color ramp function
 
+  # extract coordinates
+  x <- mesh$vb[1,]
+  y <- mesh$vb[2,]
+  z <- mesh$vb[3,]
+
+  # set up color ramp
   if(is.null(ramp))
     ramp=colour_ramp(viridis::viridis(100,option="inferno"))
 
-  if(is.null(col))
-    col=mesh$vb[3,] #plot the z dimension
+  # get default colors if col is not provided
+  if(is.null(col)){
+    m <- matrix(c(x,y,z), ncol=3, dimnames=list(NULL,c("x","y","z")))
+    col <- apply(t(mesh$it),MARGIN=1,function(row){mean(m[row,3])})
+  }
 
   colors=ramp(rescale(col))
   # val_range=range(col,na.rm=T)
@@ -33,17 +43,16 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
   # colors=ramp(vals)
 
   plot_ly(
-    x = mesh$vb[1,], y = mesh$vb[2,], z = mesh$vb[3,],
+    x = x, y = y, z = z,
     i = mesh$it[1,]-1, j = mesh$it[2,]-1, k = mesh$it[3,]-1,
-    ids=as.character(1:ncol(mesh$it)),
-    name="test name",
-    facecolor = colors,
+#    ids=as.character(1:ncol(mesh$it)),
+#    name="test name",
 #    text=paste("Value=",round(col,2)),
 #    hoverinfo = 'text',
-    colorscale="YlOrRd",
     type = "mesh3d",
-    colorbar=list(
-      title=ifelse(is.null(title),"",title))
+    facecolor = colors
+  #  colorbar=list(
+  #    title=ifelse(is.null(title),"",title))
     ) %>%
     layout(scene = list(aspectmode = "data"))
 
@@ -73,7 +82,5 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
 
 
 if(F){
-
   plotmesh(mesh,col=mesh$data$hole)
-
 }

@@ -1,30 +1,32 @@
 # NOT WORKING - this does nothing.
+#pkgload::load_code()
+#devtools::load_all()
 
-meshbase<-function(mesh, height=0.1){
+#mesh= vcgPlyRead("tempdata/ect110r.ply",clean = F, updateNormals = T)
+#plotmesh(mesh)
 
-  bb=meshcube(mesh)
-  bb=vcgBox(mesh)
+meshbase<-function(mesh, adjust_z=0.01){
+  require(Rvcg)
+  base_z=min(mesh$vb[3,])-adjust_z
 
-  mesh2=mergeMeshes(mesh,bb)
+  # get clean edges
+  mesh_clean=  mesh %>%  vcgClean(sel=c(6),tol=0.01)
+  edge_clean = vcgGetEdge(mesh_clean) %>%
+    filter(border==1)
+  edge_verts=mesh_clean$vb[,unique(c(edge_clean$vert1,edge_clean$vert2))]
 
-  plotmesh(mesh2)
+  edge_dists=apply(mesh$vb, 2, function(z){
+    min(fdist(z[1],edge_verts[1,],
+              z[2],edge_verts[2,],
+              z[3],edge_verts[3,]))
+  })
+  edge_keep <- which(edge_dists<=0.01)  #identify the true edges
 
-}
+  edge = vcgGetEdge(mesh) %>%
+    filter(border==1)
+  edge_vb=unique(c(edge$vert1,edge$vert2))
 
-
-library(mesheR)
-data(humface)
-bboxmesh <-  getMeshBox(humface,tri=TRUE) %>%
-  meshOffset(offset=c(-40))
-
-edge=vcgGetEdge(humface)
-
-
-plotmesh(mergeMeshes(humface,bboxmesh))
-
-outside <- outsideBBox(humface,bbox)
-humshrink <- rmVertex(humface,outside)
-
-c1=cropOutsideBBox(humface,bboxmesh)
-
-plotmesh(c1)
+  # update edge values to new z value
+  mesh$vb[3, edge_vb[edge_vb%in%edge_keep]]=base_z
+  return(mesh)
+    }
