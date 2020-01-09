@@ -178,13 +178,15 @@ mesh_predict=left_join(mesh$data, # pull data from mesh object
 
 
 # plot the predicted suitability on the mesh
-plotmesh(mesh,
+mesh %>%
+  meshbase(clean_tol=0.4,adjust_z=0.1,edge_tol=0.01) %>%
+  plotmesh(
 #         mesh_predict$hole_10, # the column to use to color mesh
-         mesh_predict$suitability, # the column to use to color mesh
+         mesh_predict$suitability_nobio, # the column to use to color mesh
          title="Suitability")
 
 
-########################
+`########################
 ## Exploring other mesh plots
 if(F) {
   #fading from points to mesh

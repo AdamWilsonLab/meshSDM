@@ -82,5 +82,6 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
 
 
 if(F){
+  plotmesh(mesh)
   plotmesh(mesh,col=mesh$data$hole)
 }

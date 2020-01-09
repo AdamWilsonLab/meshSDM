@@ -5,13 +5,16 @@
 #mesh= vcgPlyRead("tempdata/ect110r.ply",clean = F, updateNormals = T)
 #plotmesh(mesh)
 
-meshbase<-function(mesh, adjust_z=0.01){
+meshbase<-function(mesh, clean_tol=0.01,edge_tol=0.01,adjust_z=0.01){
   require(Rvcg)
   base_z=min(mesh$vb[3,])-adjust_z
 
   # get clean edges
-  mesh_clean=  mesh %>%  vcgClean(sel=c(6),tol=0.01)
-  edge_clean = vcgGetEdge(mesh_clean) %>%
+  mesh_clean=  mesh %>%  vcgClean(sel=c(6),tol=clean_tol)
+
+ # mesh_filled <- vcgBallPivoting(mesh, radius = 0, clustering = 0.01, angle = pi/2, deleteFaces = FALSE)
+
+    edge_clean = vcgGetEdge(mesh_clean) %>%
     filter(border==1)
   edge_verts=mesh_clean$vb[,unique(c(edge_clean$vert1,edge_clean$vert2))]
 
@@ -20,7 +23,7 @@ meshbase<-function(mesh, adjust_z=0.01){
               z[2],edge_verts[2,],
               z[3],edge_verts[3,]))
   })
-  edge_keep <- which(edge_dists<=0.01)  #identify the true edges
+  edge_keep <- which(edge_dists<=edge_tol)  #identify the true edges
 
   edge = vcgGetEdge(mesh) %>%
     filter(border==1)
