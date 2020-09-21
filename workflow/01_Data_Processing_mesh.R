@@ -91,6 +91,7 @@ loop_output=foreach(i=1:nrow(files),
   #############################
   ## Import, process mesh
   ## Returns mesh with attached attributes
+  ## Currently caluclates the median of continuous values and percentages of the categorical values.
   mesh=process_mesh(mesh_file=f$mesh_path,pts,mesh_tol=0.001)
 
 

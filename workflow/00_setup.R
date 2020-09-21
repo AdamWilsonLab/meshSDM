@@ -1,12 +1,12 @@
 ## Libraries
 if(system("hostname",intern = T)=="srv-u10-26.cbls.ccr.buffalo.edu"){
-  library(hpc)
-  moduleInit()
+#  library(hpc)
+#  moduleInit()
   #module("load lmod/6.0.1 StdEnv intel/17.0 python/anaconda grass")
-  module("load intel/17.0 python/anaconda grass gcc StdEnv")
+ # module("load intel/17.0 python/anaconda grass gcc StdEnv")
 #  module("list")
-  dyn.load("/util/academic/libpng/1.6.17/lib/libpng16.so.16")
-  dyn.load("/util/academic/grass/proj.4-4.9.1/lib/libproj.so")
+#  dyn.load("/util/academic/libpng/1.6.17/lib/libpng16.so.16")
+#  dyn.load("/util/academic/grass/proj.4-4.9.1/lib/libproj.so")
   #  library(rgdal)
 #  dyn.load("/util/academic/grass/gdal-2.2.0/lib/libgdal.so.20")
 #  dyn.load("/projects/academic/adamw/R/library/e1071/libs/e1071.so")

@@ -23,12 +23,14 @@ meshfiles=data.frame(
 #quad="eut49r"  #choose which quad
 #quad="ect14l"  #choose which quad
 quad="ect210r"
+quad="ect25l"
+
 mesh=meshfiles$mesh_path[meshfiles$quad==quad] %>% readRDS()
 
 #plotmesh(mesh)
 
 mesh %>%
-  meshbase() %>%
+#  meshbase() %>%
   plotmesh(col = mesh$data$slope_10)
 
 
@@ -43,10 +45,12 @@ mesh %>%
                v3 = c(0.01,-0.07,-0.12),
                normal = NULL,
                keep.upper = F) %>%
-  meshbase() %>%
+#  meshbase() %>%
   plotmesh(col = .$data$slope_10)
 
-
+mesh %>%
+  meshbase() %>%
+  vcgWrite()
 
 
 ## get corners of the bounding box
@@ -59,6 +63,8 @@ slice <- BBoxSlices(bbox,axis = 1,percent = 0.7)
 myplot <- plot3d(mesh,col="white")
 shade3d(slice,col=2,alpha=0.5)
 
+
+plotmesh(slice)
 ## now use the slice to get the difference
 
 cuthead <- vtkBooleanOp(mesh,slice,type=2)
