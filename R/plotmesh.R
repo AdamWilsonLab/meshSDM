@@ -1,13 +1,13 @@
-# https://plot.ly/r/reference/#mesh3d
-# https://plot.ly/r/3d-mesh/
-# https://plot.ly/r/trisurf/
-# https://laustep.github.io/stlahblog/posts/plotly_trisurf.html
-
+#' Use plotly library to plot a 3d mesh object
+#' @param x a mesh object
+#' @return Makes a plotly plot
+#' @import plotly
+#' @import tidyverse
+#' @examples   plotmesh(mesh)
+#' plotmesh(mesh,col=mesh$data$hole)
+#' @references  https://plot.ly/r/reference/#mesh3d, https://plot.ly/r/3d-mesh/ https://plot.ly/r/trisurf/ https://laustep.github.io/stlahblog/posts/plotly_trisurf.html
 
 plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
-
-  require(plotly)
-  require(tidyverse)
 
   # todo:
   # Check if mesh is mesh
@@ -80,8 +80,3 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
 
   }
 
-
-if(F){
-  plotmesh(mesh)
-  plotmesh(mesh,col=mesh$data$hole)
-}

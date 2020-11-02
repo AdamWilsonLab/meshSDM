@@ -8,5 +8,5 @@ test_that("df2stack", {
                v3=rnorm(n))
 
   x2=df2stack(x)
-  expect_equal(coordinates(x2)[,2],5:1)
+  expect_equal(coordinates(x2)[,1],1:5)
 })

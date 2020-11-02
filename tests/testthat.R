@@ -1,4 +1,4 @@
 library(testthat)
-library(CoralSDM)
+library(meshSDM)
 
-test_check("CoralSDM")
+test_check("meshSDM")

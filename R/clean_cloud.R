@@ -1,17 +1,17 @@
-#f=files[i,] # selects which quadrat is being processed in this iteration
+#' @import plotly
+#' @import dplyr
+#' @import scales
 
-
-#f="data/3d_tile/3DTILES_subsampled_20.txt"
-#f="data/20190415/ect16l.data/ect16l_ASCII_subsampled/ect16l_subsampled_10.txt"
 
 clean_cloud <- function(file,prefix=NULL){
 
 message(paste("################# Importing data"))
 
-d=read_csv(f,progress = F,col_types = cols())%>%slice(-1)
+d=read_csv(file,progress = F,col_types = cols())%>%slice(-1)
 
 env=
-  dplyr::select(d,X="Coord. X",
+  select(d,
+        X="Coord. X",
         Y="Coord. Y",
         Z="Coord. Z",
         Rf=one_of(c("Rf","R")),
@@ -59,8 +59,9 @@ env=mutate(env,
 if(!is.null(prefix)){
 
 env2=cbind.data.frame(
-  dplyr::select(env, X,Y,Z,Rf,Gf,Bf,Nx,Ny,Nz),
-  select(env,-X,-Y,-Z,-Rf,-Gf,-Bf,-Nx,-Ny,-Nz,)%>%dplyr::select_all(.funs = funs(paste0(.,"_",prefix)))
+  select(env, X,Y,Z,Rf,Gf,Bf,Nx,Ny,Nz),
+  select(env,-X,-Y,-Z,-Rf,-Gf,-Bf,-Nx,-Ny,-Nz,)%>%
+    select_all(.funs = funs(paste0(.,"_",prefix)))
 )
 
 }

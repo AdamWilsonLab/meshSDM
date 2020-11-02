@@ -17,8 +17,12 @@
 #' # show the coordinates of the raster
 #' coordinates(x2)
 #' plot(x2)
+#' @import raster
+#' @import tidyverse
 
 df2stack <- function(x){
+  if(!"data.frame"%in%class(x)) stop("x is not an data.frame")
+
   xl=lapply(X=1:ncol(x),FUN=function(i) {
     raster(t(as.matrix(x[,i])),
            xmn=0+.5,xmx=nrow(x)+.5, # to make y coordinates integers

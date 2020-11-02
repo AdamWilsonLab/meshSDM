@@ -1,3 +1,6 @@
+#' @import Rvcg
+#' @import tidyverse
+
 mesh_adj<-function(fids,mesh,type=c("intersect","border")){
   # fids - will return neighbors of these fids
     adj_list=vcgVFadj(mesh)
