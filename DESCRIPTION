@@ -19,5 +19,6 @@ Imports:
     colourvalues,
     sf
 Suggests: 
-    plotly
+    plotly,
+    testthat
 RoxygenNote: 6.1.1
