@@ -21,7 +21,7 @@
 #' @import raster
 #' @import tidyverse
 
-df2stack <- function(x){
+df2stack <- function(x, verbose=T){
   if(!"data.frame"%in%class(x)) stop("x is not an data.frame")
 
   xl=lapply(X=1:ncol(x),FUN=function(i) {
@@ -31,6 +31,7 @@ df2stack <- function(x){
   })
   xr=stack(xl)
   names(xr)=colnames(x)
-  metadata(xr)=list(source="Created with mesh_to_raster() function. Warning - raster is a 1 dimensional representation of a 3 dimensional mesh. The coordinate system does not make sense and needs to be joined with the original mesh dataframe for any spatial operations including plotting.")
-  return(xr)
+  metadata(xr)=list(note="Created with mesh_to_raster() function. Warning - raster is a 1 dimensional representation of a 3 dimensional mesh. The coordinate system does not make sense without the mesh geometry.")
+if(verbose) warning("Raster objects created with df2stack are a 1 dimensional representation of a data.frame. The coordinate system inside the raster object refers to rows of the original data.frame and not geographic relationships of pixels.  Do not perform any spatial operations (e.g. terrain, focal) on this raster. Convert it back to a data.frame with as.data.frame()")
+    return(xr)
 }

@@ -25,7 +25,7 @@ x=data.frame(x=1:n,
              v3=rnorm(n))
 
 ### Convert to raster stack for integration with ENMeval
-x2=df2stack(x)
+x2=df2stack(x, verbose=T)
 
 # use as.data.frame to convert back to a data.frame.
 x3 = as.data.frame(x2)
