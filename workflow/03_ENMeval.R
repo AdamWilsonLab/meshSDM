@@ -11,11 +11,11 @@ library(sf)
 #dataw<-readRDS("output/data/datawide.rds")
 
 
-### Convert to raster stack for integration with ENMeval
+## make up a sample dataset to illustrate how it works
+## You will want to use real data here instead of this x object.
 
-n=1000
-groups=5
-
+n=10
+groups=2
 x=data.frame(x=1:n,
              y=1, # always 1 to make it 1D
              group=rep(1:5,each=n/5,len=n),
@@ -24,13 +24,17 @@ x=data.frame(x=1:n,
              v2=rnorm(n),
              v3=rnorm(n))
 
+### Convert to raster stack for integration with ENMeval
 x2=df2stack(x)
 
 # use as.data.frame to convert back to a data.frame.
-expect_equal(x,as.data.frame(x2))
+x3 = as.data.frame(x2)
 
-#plot(x2)
-#x[x$pres==1,]
+# confirm the converted version is just like the original
+expect_equal(x,x3)
+
+# plot(x2)  # if desired
+
 
 ## Extact the information needed to fit with ENMeval
 ##
