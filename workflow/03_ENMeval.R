@@ -4,16 +4,16 @@ library(Rvcg)
 library(scales)
 library(viridis)
 devtools::load_all(".")
+library(raster)
+library(sf)
 
 ### load the combined data
 #dataw<-readRDS("output/data/datawide.rds")
 
 
 ### Convert to raster stack for integration with ENMeval
-library(raster)
-library(sf)
 
-n=10000
+n=1000
 groups=5
 
 x=data.frame(x=1:n,
@@ -26,13 +26,18 @@ x=data.frame(x=1:n,
 
 x2=df2stack(x)
 
+# use as.data.frame to convert back to a data.frame.
+expect_equal(x,as.data.frame(x2))
+
 #plot(x2)
 #x[x$pres==1,]
 
+## Extact the information needed to fit with ENMeval
+##
 occ=coordinates(x2)[x$pres==1,]
 occ.grp=x$y[x$pres==1]
 
-bg.sample=1000  #background sample size
+bg.sample=100  #background sample size
 bg=x %>%
   sample_n(bg.sample)
 
@@ -41,22 +46,36 @@ bg.grp=bg$group
 
 #plot(x2[[4]])
 #points(occ)
-# test extraction
+# test extraction by comparing with the oringal dataset
 extract(x2,bg.coords) %>% as.data.frame() %>% arrange(x)
 occ
+
+
 ##############################################################
 ## ENMeval
 library(ENMeval)
 
+envvars=5:7
+names(x2[[envvars]])
 
 eval1 <- ENMevaluate(occ,
-                     env=x2[[5:7]],
-                     bg.coords,
-                     occ.grp = occ.grp,
-                     bg.coords = bg.coords,
-                     bg.grp = bg.grp,
-                     method='user',
-                     fc="L",
-                     categoricals=NULL,
-                     RMvalues=rep(3,3))
+                     # env=x2[[envvars]], #select whatever layers you want to include here
+                     # bg.coords,
+                     # occ.grp = occ.grp,
+                     # bg.coords = bg.coords,
+                     # bg.grp = bg.grp,
+                     # method='user',
+                     method='jackknife',
+                    fc="L")
+
+
+#convert back to dataframe to link with geometry.
+eval1_pred=as.data.frame(eval1@predictions)
+
+
+
+
+
+
+
 

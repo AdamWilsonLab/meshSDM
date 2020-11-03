@@ -16,6 +16,7 @@
 #' x2=df2stack(x)
 #' # show the coordinates of the raster
 #' coordinates(x2)
+#' # Visualize the little 1D raster
 #' plot(x2)
 #' @import raster
 #' @import tidyverse
@@ -33,4 +34,3 @@ df2stack <- function(x){
   metadata(xr)=list(source="Created with mesh_to_raster() function. Warning - raster is a 1 dimensional representation of a 3 dimensional mesh. The coordinate system does not make sense and needs to be joined with the original mesh dataframe for any spatial operations including plotting.")
   return(xr)
 }
-

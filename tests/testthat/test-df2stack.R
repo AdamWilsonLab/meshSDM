@@ -9,4 +9,8 @@ test_that("df2stack", {
 
   x2=df2stack(x)
   expect_equal(coordinates(x2)[,1],1:5)
+
+  #convert back to data.frame and confirm it's the same
+  expect_equal(as.data.frame(x2),x)
 })
+
