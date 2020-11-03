@@ -2,7 +2,8 @@
 #' bands for each column in the dataframe.
 #'
 #' @param x A data.frame object
-#' @return A raster stack with a layer for each column in the dataset
+#' @return A raster stack with a layer (band) for each column in the dataset
+#' @description This function implements a 'hack' to convert the data.frame associated with a mesh3D object into a 1D raster stack where each column in the raster corresponds to one row of the data.frame.  This is to create the file format required by many SDM modeling functions such as \code{ENMevaluate}.  But be careful, the raster created by this function has no spatial meaning.  Pixels that are adjacent in this raster are not necessarily adjacent in geographic space.  It is simply a restructuring of the data.frame.  So only use the resulting raster in ways that do not involve spatial relationships between pixels.  For example, calculating the slope, focal mean, or other functions on this raster would be meaningless (at best) and misleading (at worst).  If you are going to use this raster with ENMevaluate, please use the custom grouping option (and define your own groups) and not any of the methods that rely on spatial relationships.
 #' @examples
 #' n=5
 #' # Create a test data.frame to illustrate the function
@@ -16,7 +17,7 @@
 #' x2=df2stack(x)
 #' # show the coordinates of the raster
 #' coordinates(x2)
-#' # Visualize the little 1D raster
+#' # Visualize the little 1D raster to understand what this is doing.
 #' plot(x2)
 #' @import raster
 #' @import tidyverse
