@@ -30,7 +30,7 @@ df2stack <- function(x, verbose=T){
            xmn=0+.5,xmx=nrow(x)+.5, # to make y coordinates integers
            ymn=0.5,ymx=1.5) #to make all x coordinates = 1
   })
-  xr=stack(xl)
+  xr=stack(xl,quick=T)
   names(xr)=colnames(x)
   metadata(xr)=list(note="Created with mesh_to_raster() function. Warning - raster is a 1 dimensional representation of a 3 dimensional mesh. The coordinate system does not make sense without the mesh geometry.")
 if(verbose) warning("Raster objects created with df2stack are a 1 dimensional representation of a data.frame. The coordinate system inside the raster object refers to rows of the original data.frame and not geographic relationships of pixels.  Do not perform any spatial operations (e.g. terrain, focal) on this raster. Convert it back to a data.frame with as.data.frame()")

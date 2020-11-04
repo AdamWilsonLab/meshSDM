@@ -7,10 +7,6 @@ devtools::load_all(".")
 library(raster)
 library(sf)
 
-### load the combined data
-#dataw<-readRDS("output/data/datawide.rds")
-
-
 ## make up a sample dataset to illustrate how it works
 ## You will want to use real data here instead of this x object.
 
@@ -35,41 +31,52 @@ expect_equal(x,x3)
 
 # plot(x2)  # if desired
 
+### load the combined data
+data<-readRDS("output/data/datawide.rds") %>%
+  mutate(visible=as.numeric(visible),
+         pres_ocr=ifelse(is.na(pres_ocr),0,1),
+         pres_scr=ifelse(is.na(pres_scr),0,1),
+         quad=as.numeric(as.factor(quad)),
+         row=1:n()
+         )
+
+rdata=df2stack(data)
+
+# save/load the raster object if desired
+if(F){
+  save(rdata,file="output/data/dataraster.rds")
+  load("output/data/dataraster.rds")
+}
 
 ## Extact the information needed to fit with ENMeval
 ##
-occ=coordinates(x2)[x$pres==1,]
-occ.grp=x$y[x$pres==1]
 
-bg.sample=100  #background sample size
-bg=x %>%
+occ=coordinates(rdata)[data$pres_ocr==1,]
+occ.grp=data$quad[data$pres_ocr==1]
+
+bg.sample=10000  #background sample size
+bg=data %>%
   sample_n(bg.sample)
 
-bg.coords=bg[,c("x","y")] %>% as.matrix()
+bg.coords=cbind(x=bg$row,y=1) %>% as.matrix()
 bg.grp=bg$group
-
-#plot(x2[[4]])
-#points(occ)
-# test extraction by comparing with the oringal dataset
-extract(x2,bg.coords) %>% as.data.frame() %>% arrange(x)
-occ
-
 
 ##############################################################
 ## ENMeval
 library(ENMeval)
 
-envvars=5:7
-names(x2[[envvars]])
+model_vars=c("hole_5","hole_10","hole_100","slope_10","rough_5","rough_10", "rough_20","coral","sponge","rock","sand")
+
+names(rdata[[model_vars]])
 
 eval1 <- ENMevaluate(occ,
-                     # env=x2[[envvars]], #select whatever layers you want to include here
-                     # bg.coords,
-                     # occ.grp = occ.grp,
-                     # bg.coords = bg.coords,
-                     # bg.grp = bg.grp,
-                     # method='user',
-                     method='jackknife',
+                     env=rdata[[model_vars]], #select whatever layers you want to include
+                     bg.coords,
+                     occ.grp = occ.grp,
+                     bg.coords = bg.coords,
+                     bg.grp = bg.grp,
+                     method='user',
+#                     method='jackknife',
                     fc="L")
 
 
