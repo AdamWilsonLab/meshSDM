@@ -38,7 +38,19 @@ data<-readRDS("output/data/datawide.rds") %>%
          pres_scr=ifelse(is.na(pres_scr),0,1),
          quad=as.numeric(as.factor(quad)),
          row=1:n()
-         )
+         ) %>%
+  na.omit()
+
+# reduce size of dataset for testing?
+subsample=F
+if(subsample){
+data2=bind_rows(
+  sample_n(filter(data,pres_ocr==0),1e6),  # keep only a sample of 0s
+  filter(data,pres_ocr==1)) %>%  # keep all presences
+  mutate(row=1:n())  #reset the row counter
+
+data=data2
+}
 
 rdata=df2stack(data)
 
@@ -51,7 +63,7 @@ if(F){
 ## Extact the information needed to fit with ENMeval
 ##
 
-occ=coordinates(rdata)[data$pres_ocr==1,]
+occ=cbind(x=data$row[data$pres_ocr==1],y=1) %>%  as.matrix()
 occ.grp=data$quad[data$pres_ocr==1]
 
 bg.sample=10000  #background sample size
@@ -59,7 +71,7 @@ bg=data %>%
   sample_n(bg.sample)
 
 bg.coords=cbind(x=bg$row,y=1) %>% as.matrix()
-bg.grp=bg$group
+bg.grp=bg$quad
 
 ##############################################################
 ## ENMeval
@@ -71,13 +83,14 @@ names(rdata[[model_vars]])
 
 eval1 <- ENMevaluate(occ,
                      env=rdata[[model_vars]], #select whatever layers you want to include
-                     bg.coords,
-                     occ.grp = occ.grp,
+#                     occ.grp = occ.grp,
                      bg.coords = bg.coords,
-                     bg.grp = bg.grp,
-                     method='user',
-#                     method='jackknife',
-                    fc="L")
+#                     bg.grp = bg.grp,
+#                     method='user',
+                     method='randomkfold',
+                    kfolds=5,
+                    fc="L",
+                    rasterPreds=F)
 
 
 #convert back to dataframe to link with geometry.
