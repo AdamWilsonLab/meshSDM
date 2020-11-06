@@ -36,10 +36,15 @@ data<-readRDS("output/data/datawide.rds") %>%
   mutate(visible=as.numeric(visible),
          pres_ocr=ifelse(is.na(pres_ocr),0,1),
          pres_scr=ifelse(is.na(pres_scr),0,1),
+         rock=rock+rock_igneous,
          quad=as.numeric(as.factor(quad)),
          row=1:n()
          ) %>%
   na.omit()
+
+## EDA quads
+data %>% group_by(quad) %>%
+  summarize(n=n(),n_pres=sum(pres_ocr)) %>% View()
 
 # reduce size of dataset for testing?
 subsample=F
@@ -89,13 +94,26 @@ eval1 <- ENMevaluate(occ,
 #                     method='user',
                      method='randomkfold',
                     kfolds=5,
-                    fc="L",
-                    rasterPreds=F)
+                    fc="LHQ",
+                    rasterPreds=T)
+
+hist(eval1@results$train.AUC)
+eval1@results
+
+data$suitability=values(eval1@predictions$LHQ_0.5)
+
+ggplot(data,aes(x=as.factor(pres_ocr),y=suitability))+
+  geom_boxplot()+
+  scale_y_log10()+
+  xlab("OCR Presence")
+
+ggplot(data,aes(color=as.factor(pres_ocr),x=suitability))+
+  geom_density()+
+  scale_x_log10()
 
 
 #convert back to dataframe to link with geometry.
-eval1_pred=as.data.frame(eval1@predictions)
-
+#eval1_pred=as.data.frame(eval1@predictions)
 
 
 
