@@ -1,7 +1,5 @@
 #Read in the individual quads and rbind them into a single dataset for modeling.
 
-source("workflow/00_setup.R")
-
 library(foreach)
 library(doParallel)
 library(sf)

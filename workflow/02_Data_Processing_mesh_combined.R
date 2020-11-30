@@ -1,7 +1,6 @@
 ## Read in the individual quad data, rbind it,
 ## and convert to the format needed for EDA and modeling
 
-
 library(tidyverse)
 library(foreach)
 library(doParallel)
