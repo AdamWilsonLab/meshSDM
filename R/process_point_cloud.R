@@ -1,3 +1,5 @@
+#' @import tidyverse
+
 process_point_cloud<-function(path,id,scale=NULL,offset=0){
 
   pts=read_csv(path)%>%

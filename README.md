@@ -1,14 +1,11 @@
 
-TODO:
+# meshSDM
 
-1. Why no edge effect on hole metric at large scales (can see in dist metric but not hole metric)
-2. Median stat?
-3. Write out torus csv for each recruit?
-
+A collection of functions (and example workflows) to build SDMs on 3D meshes. 
 
 
 ## Installing from GitHub
 ```
-devtools::install_github("https://github.com/AdamWilsonLab/CoralSDM.git")
-library(CoralSDM)
+devtools::install_github("https://github.com/AdamWilsonLab/meshSDM.git")
+library(meshSDM)
 ```

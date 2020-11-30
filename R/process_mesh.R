@@ -1,3 +1,6 @@
+#' @import Rvcg
+#' @import tidyverse
+
 # potentially smooth/clean. If not desired, simply set mesh=mesh_full
 # mesh_tol=0.001 #mesh will be simplified to have an average side length of this value in m
 

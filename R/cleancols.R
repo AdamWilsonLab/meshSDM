@@ -1,8 +1,8 @@
+#' @import plotly
+#' @import tidyverse
+
 cleancols <- function(x){
   dplyr::select(x,
-#                x="Coord._X",
-#                y="Coord._Y",
-#                z="Coord._Z",
                 x="Coord. X",
                 y="Coord. Y",
                 z="Coord. Z",

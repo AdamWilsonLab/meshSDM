@@ -1,4 +1,5 @@
 
+<<<<<<< HEAD
 library(tidyverse)
 #library(Morpho)
 library(Rvcg)
@@ -8,8 +9,10 @@ library(viridis)
 library(colourvalues)
 library(sf)
 library(foreach)
+=======
+>>>>>>> 0f982aba8139e32710c94135e94211aceccbd7a3
 library(doParallel)
-registerDoParallel(30)
+registerDoParallel(3)
 devtools::load_all(".", reset=F)
 
 ## Other settings / parameters
@@ -91,15 +94,18 @@ loop_output=foreach(i=1:nrow(files),
   #############################
   ## Import, process mesh
   ## Returns mesh with attached attributes
-  ## Currently caluclates the median of continuous values and percentages of the categorical values.
+  ## Currently calculates the median of continuous values and
+  ## percentages of categorical values.
   mesh=process_mesh(mesh_file=f$mesh_path,pts,mesh_tol=0.001)
 
 
   ##########################################
   ####  Extract data for occurrence points
   ## link occurrence points with the mesh and update the attribute table
-  mesh_ocr = process_occurrences(occurrence_file=f$occurrence_path,mesh=mesh,pts=pts,class="ocr",proj=proj)
-  mesh_scr = process_occurrences(f$occurrence_path,mesh,pts,class="scr",proj=proj)
+  mesh_ocr = process_occurrences(occurrence_file=f$occurrence_path,
+                                 mesh=mesh,pts=pts,class="ocr",proj=proj)
+  mesh_scr = process_occurrences(f$occurrence_path,
+                                 mesh,pts,class="scr",proj=proj)
 
 
   ## Add them to the mesh data object

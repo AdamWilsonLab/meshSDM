@@ -1,3 +1,7 @@
+#' @import sf
+#' @import tidyverse
+
+
 process_occurrences<-function(occurrence_file,mesh,pts,class="ocr",proj){
 
   # If occurrence file is missing, return all 0s

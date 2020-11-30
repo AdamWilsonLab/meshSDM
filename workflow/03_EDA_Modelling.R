@@ -28,6 +28,8 @@ datal %>%
 
 dataw %>% filter(!is.na(pres_ocr))%>% group_by(visible) %>% summarize(n=n())
 }
+
+
 ### Mesh files
 ## Build file list
 meshfiles=data.frame(
@@ -53,7 +55,6 @@ meshfiles=data.frame(
 #plotmesh(mesh,visible)
 
 # percent missing by variable
-
 datal%>%group_by(var,scale)%>%
   summarize(n=n(),na=sum(is.na(value)),p=na/n) %>%
   arrange(desc(na))

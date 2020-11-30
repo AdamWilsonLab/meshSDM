@@ -1,23 +1,13 @@
-
+#' Compute 3D between two points
 #'
-#' Example
+#' @param x Either a single value (the x value of the first point) or a vector of length 9
+#' @return Scalar value of Euclidian distance between points
+#' @examples
 #' a=c(1,2,3)
 #' b=c(3,2,1)
 #' c=c(5,6,7)
-
-#' angle3D(c(a[1],a[2],a[3],
-#' b[1],b[2],b[3],
-#' c[1],c[2],c[3]))
-
-
-#dist3D <- function(x1, x2, y1, y2, z1, z2 ){
-#  sqrt( (x2 - x1)^2 + (y2 - y1)^2 + (z2 - z1)^2 )
-#}
-# https://stackoverflow.com/questions/39671579/compute-euclidean-distance-matrix-from-x-y-z-coordinates
-fdist <- function(x1,x2,y1=NULL, y2=NULL, z1=NULL, z2=NULL){
-  if(is.null(y1)) return(sqrt(sum((x1-x2)^2)))
-  if(!is.null(y1)) return(sqrt( (x2 - x1)^2 + (y2 - y1)^2 + (z2 - z1)^2 ))
-}
+#' angle3D(c(a[1],a[2],a[3],b[1],b[2],b[3],c[1],c[2],c[3]))
+#' @references https://stackoverflow.com/questions/39671579/compute-euclidean-distance-matrix-from-x-y-z-coordinates
 
 
 angle3D=function(x1,x2=NULL,x3=NULL,x4=NULL,x5=NULL,x6=NULL,x7=NULL,x8=NULL,x9=NULL){

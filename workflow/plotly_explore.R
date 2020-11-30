@@ -1,15 +1,20 @@
-plotmesh=function(mesh,color_vec=NULL,...){
 require(plotly)
 require(tidyverse)
+library(Rvcg)
+library(morpho)
 
-  cramp=colour_ramp(viridis::viridis(100,option="inferno"))
-  if(is.null(color_vec))
-    facecolor=cramp(rescale(color_vec))
+mesh1=vcgCone(0.5,0.5,h=1)
+mesh2=vcgCone(1,1,h=1)
+
 
   plot_ly(
-    x = mesh$vb[1,], y = mesh$vb[2,], z = mesh$vb[3,],
-    i = mesh$it[1,]-1, j = mesh$it[2,]-1, k = mesh$it[3,]-1,
-    facecolor = facecolor,
-    type = "mesh3d",...
-  ) %>% layout(scene = list(aspectmode = "data"))
-  }
+    x = mesh1$vb[1,], y = mesh1$vb[2,], z = mesh1$vb[3,],
+    i = mesh1$it[1,]-1, j = mesh1$it[2,]-1, k = mesh1$it[3,]-1,
+    intensity = mesh$vb[3,],
+    type = "mesh3d",
+  )%>% layout(scene = list(aspectmode = "data"))
+
+
+  plot_ly(x=~mesh2$vb[1,], y = ~mesh2$vb[2,], z = ~mesh2$vb[3,], type = 'scatter3d', mode = 'lines',
+          opacity = 1, line = list(width = 6, reverscale = FALSE))
+

@@ -1,3 +1,6 @@
+#' @import Rvcg
+#' @import tidyverse
+
 # NOT WORKING - this does nothing.
 #pkgload::load_code()
 #devtools::load_all()

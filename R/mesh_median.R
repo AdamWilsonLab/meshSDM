@@ -1,3 +1,5 @@
+#' @import tidyverse
+
 mesh_median <- function (fids, data, return=c("values","index"),...){
   # confirm the fid column exists
     if(!"fid" %in% names(data)) stop("data does not include an 'fid' column")

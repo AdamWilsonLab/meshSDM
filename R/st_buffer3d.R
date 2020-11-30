@@ -4,8 +4,8 @@ st_bboxbuffer3d <- function(x, dist){
     apply(2,range)
   if(dim(res)[2]==2)
     stop("Object only has two dimensions, use st_bbox instead")
-#  if(dim(res)[2]>3)
-#    stop("Object only too many dimensions")
+  if(dim(res)[2]>3)
+    stop("Object only too many dimensions")
   buf3d=c(xmin=as.numeric(res[1,"X"])-dist,
           ymin=as.numeric(res[1,"Y"])-dist,
           zmin=as.numeric(res[1,"Z"])-dist,
