@@ -1,16 +1,13 @@
 
-<<<<<<< HEAD
 library(tidyverse)
-#library(Morpho)
+library(Morpho)
 library(Rvcg)
-#library(rgl)
+library(rgl)
 library(scales)
 library(viridis)
 library(colourvalues)
 library(sf)
 library(foreach)
-=======
->>>>>>> 0f982aba8139e32710c94135e94211aceccbd7a3
 library(doParallel)
 registerDoParallel(3)
 devtools::load_all(".", reset=F)
