@@ -30,6 +30,8 @@ x3 = as.data.frame(x2)
 expect_equal(x,x3)
 
 # plot(x2)  # if desired
+dataw<-readRDS("output/data/datawide.rds")
+
 
 ### load the combined data
 data<-readRDS("output/data/datawide.rds") %>%
@@ -39,8 +41,8 @@ data<-readRDS("output/data/datawide.rds") %>%
          rock=rock+rock_igneous,
          quad=as.numeric(as.factor(quad)),
          row=1:n()
-         ) %>%
-  na.omit()
+         ) #%>%
+#  na.omit()
 
 ## EDA quads
 data %>% group_by(quad) %>%

@@ -14,10 +14,27 @@ proj="+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
 
 #pts=read_csv("tempdata/ect110r_subsampled_5.txt")%>%
-pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_10.txt")%>%
+pts=read_table2("tempdata/3d_tile/3DTILES.data/3DTILES_ASCII_subsampled/3DTILES_subsampled_5.txt")%>%
   slice(-1)%>%
-  cleancols()%>%
-  mutate(x=x-1,
+  dplyr::select(x="\\\\X",
+                y="Y",
+                z="Z",
+                r=one_of(c("Rf","R")),
+                g=one_of(c("Gf","G")),
+                b=one_of(c("Bf","B")),
+                class=Classification,
+                x_smooth=contains("Coord._X.smooth"),
+                y_smooth=contains("Coord._Y.smooth"),
+                z_smooth=contains("Coord._Z.smooth"),
+                Ny=Ny,
+                Nx=Nx,
+                Nz=Nz,
+                gc=contains("Gaussian_curvature"),
+                rough=contains("Roughness"),
+                aspect=contains("Dip_direction_(degrees)"),
+                density=contains("Volume density"),
+                slope="Dip_(degrees)") %>%
+    mutate(x=x-1,
          y=y-1,
          z=z-1,
          x_smooth=x_smooth-1,
@@ -106,6 +123,10 @@ faces_data_all <- pts%>%
 #  This faces_data table holds all the environmental data for the mesh
 faces_data <- left_join(faces,faces_data_all,by="fid")%>%
   arrange(fid)
+
+
+  plotmesh(mesh,faces_data$hole_10, # the column to use to color mesh
+    title="Hole")
 
 dim(faces_data)
 ncol(mesh$it)
