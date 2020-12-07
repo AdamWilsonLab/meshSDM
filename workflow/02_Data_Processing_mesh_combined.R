@@ -22,7 +22,7 @@ files=data.frame(
     fname=basename(mesh_path),
     quad=sub("[.].*$","",fname))%>%
   dplyr::select(-fname)%>%
-  as.tbl() %>%
+  as_tibble() %>%
   filter(quad!="ect16l")  #has two recruits in one face.
 
 
@@ -44,7 +44,7 @@ dataw=foreach(i=1:nrow(files),.combine=bind_rows, .inorder = F)%dopar%{
   data=mesh$data %>%
 #    group_by(fid) %>%
 #    top_n(n = 1) %>%
-    select(-dropvars) #%>%
+    dplyr::select(-dropvars) #%>%
 #    mutate(pres_ocr=ifelse(is.na(pres_ocr),0,1),
 #           pres_scr=ifelse(is.na(pres_scr),0,1))
   return(data)

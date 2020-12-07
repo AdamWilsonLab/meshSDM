@@ -63,7 +63,7 @@ data=foreach(q=unique(files$quad),.combine=bind_rows, .inorder = F)%dopar%{
 
   tdata<-
       mesh$data %>%
-      select(-all_of(c(dropvars,valvars))) %>%
+    dplyr::select(-all_of(c(dropvars,valvars))) %>%
       mutate(quad=f1$quad,
              pres_ocr=ifelse(pres_ocr==0,NA,pres_ocr),
              pres_scr=ifelse(pres_scr==0,NA,pres_scr)) %>%
@@ -76,25 +76,25 @@ allscale_data = foreach(s=files$scale[files$quad==q])%do%{
     mesh=readRDS(f$mesh_path)
     mesh$data %>%
       mutate(quad=f1$quad,scale=f$scale) %>%
-      select(-all_of(dropvars)) %>%
+      dplyr::select(-all_of(dropvars)) %>%
       fncols(classvars) %>%  # adds any missing classvar columns
       mutate_at(classvars, function(x) ifelse(is.na(x),0,x)) %>%  # replace NA classes 0s
       rename_at(valvars,function(x) paste(x,as.character(s),sep="_")) %>%
       arrange(fid) %>%
-      select(-idvars,-contains("scale"),fid) %>%
+      dplyr::select(-all_of(idvars),-contains("scale"),fid) %>%
       as_tibble()
   } %>%
   reduce(left_join, by = "fid") #join them all back together
 
 # confirm the fids match across scales
 if(cbind(tdata$fid,allscale_data) %>%
-  select(contains("fid")) %>%
+  dplyr::select(contains("fid")) %>%
   apply(1,function(x) sum(diff(x))) %>%
   sum()!=0) stop("fids do not match across scales")
 
 mesh$data=
   left_join(tdata,allscale_data,by="fid") %>%
-  select(fid,everything()) %>%  #rearrange columns so fid is first
+  dplyr::select(fid,everything()) %>%  #rearrange columns so fid is first
   arrange(fid) %>%
   as_tibble()
 
