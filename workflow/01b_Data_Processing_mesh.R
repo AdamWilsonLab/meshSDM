@@ -1,11 +1,5 @@
 
 library(tidyverse)
-library(Morpho)
-library(Rvcg)
-library(rgl)
-library(scales)
-library(viridis)
-library(colourvalues)
 library(sf)
 library(foreach)
 library(doParallel)
@@ -51,7 +45,7 @@ files=data.frame(
   separate(col = quad,into=c("quad","scale"),sep="_")%>%
   mutate(scale=as.numeric(scale))%>%
   dplyr::select(-fname)%>%
-  as.tbl()
+  as_tibble()
 
 
 fncols <- function(data, cname) {
@@ -69,7 +63,7 @@ data=foreach(q=unique(files$quad),.combine=bind_rows, .inorder = F)%dopar%{
 
   tdata<-
       mesh$data %>%
-      select(-c(dropvars,valvars)) %>%
+    dplyr::select(-all_of(c(dropvars,valvars))) %>%
       mutate(quad=f1$quad,
              pres_ocr=ifelse(pres_ocr==0,NA,pres_ocr),
              pres_scr=ifelse(pres_scr==0,NA,pres_scr)) %>%
@@ -77,33 +71,34 @@ data=foreach(q=unique(files$quad),.combine=bind_rows, .inorder = F)%dopar%{
       mutate_at(classvars, function(x) ifelse(is.na(x),0,x))  # replace NA classes 0s
 
   # now loop through other scales and gather the data
-allscale_data = foreach(s=files$scale[files$quad==q],.combine=bind_cols)%do%{
+allscale_data = foreach(s=files$scale[files$quad==q])%do%{
     f=filter(files,quad==q,scale==s)
     mesh=readRDS(f$mesh_path)
     mesh$data %>%
       mutate(quad=f1$quad,scale=f$scale) %>%
-      select(-dropvars) %>%
+      dplyr::select(-all_of(dropvars)) %>%
       fncols(classvars) %>%  # adds any missing classvar columns
       mutate_at(classvars, function(x) ifelse(is.na(x),0,x)) %>%  # replace NA classes 0s
       rename_at(valvars,function(x) paste(x,as.character(s),sep="_")) %>%
-      select(-idvars,-scale,fid) %>%
       arrange(fid) %>%
-      as.tbl()
-  }
-
+      dplyr::select(-all_of(idvars),-contains("scale"),fid) %>%
+      as_tibble()
+  } %>%
+  reduce(left_join, by = "fid") #join them all back together
 
 # confirm the fids match across scales
 if(cbind(tdata$fid,allscale_data) %>%
-  select(contains("fid")) %>%
+  dplyr::select(contains("fid")) %>%
   apply(1,function(x) sum(diff(x))) %>%
   sum()!=0) stop("fids do not match across scales")
 
-mesh$data=bind_cols(
-  tdata,allscale_data
-) %>%
-  select(-scale,-contains("fid"),fid) %>%  # drop the fid copies from the cbind above
-  select(fid,everything()) %>%  #rearrange columns so fid is first
-  as.tbl()
+mesh$data=
+  left_join(tdata,allscale_data,by="fid") %>%
+  dplyr::select(fid,everything()) %>%  #rearrange columns so fid is first
+  arrange(fid) %>%
+  as_tibble()
+
+if(sum(mesh$data$fid!=1:nrow(mesh$data))>0) error("Matching problem")
 
 output_path=file.path(outputdir,paste0(q,".rds"))
 saveRDS(mesh,file=output_path,compress = T)
@@ -111,7 +106,7 @@ saveRDS(mesh,file=output_path,compress = T)
 results=data.frame(
   quad=f1$quad,
   n=nrow(mesh$data),
-  n_pres=sum(mesh$data$pres_ocr),
+  n_pres=sum(!is.na(mesh$data$pres_ocr)),
   path=output_path
 )
 print(results)

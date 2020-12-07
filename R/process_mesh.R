@@ -27,7 +27,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
   faces=data.frame(
     fid=1:ncol(mesh$it),                    # face index
     vcgBary(mesh))%>%                       # add barycenter coordinates for each face
-    select(fid=fid,x=X1,y=X2,z=X3)%>%        # rename columns
+    dplyr::select(fid=fid,x=X1,y=X2,z=X3)%>%        # rename columns
     mutate(
       mesh_border=vcgBorder(mesh)$borderit,
       mesh_curve=vcgCurve(mesh)$gaussitmax
@@ -36,7 +36,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
 # calculate median point values for each face
   faces_data_all <- pts%>%
     group_by(fid)%>%
-    select(-x,-y,-z)%>% # don't take median of the coordinates
+    dplyr::select(-x,-y,-z)%>% # don't take median of the coordinates
     summarize_if(is.numeric,median, na.rm=T)%>%
     mutate(scale=pts$scale[1],id=pts$id[1]) #add metadata back to dataset
 
@@ -78,16 +78,7 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
 
   if(F){
 
-      plot_ly(
-        x = mesh$vb[1,], y = mesh$vb[2,], z = mesh$vb[3,],
-        i = mesh$it[1,]-1, j = mesh$it[2,]-1, k = mesh$it[3,]-1,
-        intensity = as.factor(1:ncol(mesh$it)==413),
-        type = "mesh3d",
-      ) %>% layout(scene = list(aspectmode = "data"))%>%
-    #    add_markers(data=sample_n(pts,size = 1000), x = ~x, y = ~y, z = ~z, color=~z,size=.05) #color = ~z,
-    add_markers(data=filter(pts,fid==413), x = ~x, y = ~y, z = ~z, size=.05) #color = ~z,
-
-
+  library(plotly)
   plotmesh(mesh,mesh$data$hole,flatshading=T)
   }
 
