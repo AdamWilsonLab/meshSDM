@@ -18,6 +18,7 @@ data<-readRDS("output/data/datawide.rds") %>%
          ) %>%
   dplyr::select(-scale)
 
+
 ## EDA quads
 if(F) {
   data %>% group_by(quad) %>%
