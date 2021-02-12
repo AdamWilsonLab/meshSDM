@@ -50,10 +50,10 @@ plotmesh=function(mesh,col=NULL,ramp=NULL,title=NULL, ...){
 #    text=paste("Value=",round(col,2)),
 #    hoverinfo = 'text',
     type = "mesh3d",
-    facecolor = colors
+    facecolor = colors,
   #  colorbar=list(
   #    title=ifelse(is.null(title),"",title))
-    ) %>%
+    ...) %>%
     layout(scene = list(aspectmode = "data"))
 
   # td=cbind.data.frame(val=round(col,2),colors) %>%

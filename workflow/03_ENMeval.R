@@ -13,7 +13,9 @@ data<-readRDS("output/data/datawide.rds") %>%
          pres_ocr=ifelse(is.na(pres_ocr),0,1),
          pres_scr=ifelse(is.na(pres_scr),0,1),
          rock=rock+rock_igneous,
-         quad=as.numeric(as.factor(quad)),
+         transect=substr(quad,1,4),  #just the transect id
+         transect_id=as.numeric(as.factor(transect)), #transect #
+         quad_id=as.numeric(as.factor(quad)), #quad #
          row=1:n()
          ) %>%
   dplyr::select(-scale)
@@ -21,9 +23,18 @@ data<-readRDS("output/data/datawide.rds") %>%
 
 ## EDA quads
 if(F) {
-  data %>% group_by(quad) %>%
-  summarize(n=n(),n_pres=sum(pres_ocr)) %>% View()
-}
+  data %>%
+    group_by(quad) %>%
+    summarize(n=n(),
+            n_ocr=sum(pres_ocr),
+            n_scr=sum(pres_scr))
+
+  data %>%
+    group_by(transect) %>%
+    summarize(n=n(),
+              n_ocr=sum(pres_ocr),
+              n_scr=sum(pres_scr))
+  }
 
 # reduce size of dataset for testing?
 subsample=F
@@ -37,7 +48,11 @@ if(subsample){
 data=data2
 }
 
-rdata=df2stack(data)
+# Convert to raster stack (dropping text fields)
+# this is done to faciliate using ENMeval predict functions on rasters
+rdata=data %>%
+  dplyr::select(-transect,-quad) %>%
+  df2stack()
 
 # save/load the raster object if desired
 if(F){
@@ -48,27 +63,17 @@ if(F){
 ## Define groups
 ### This could be by quad or groups of quads
 ### These groups are used in the custom k-folding in ENMEval
-unique(data$quad)
+table(data$transect_id)
 
-
-# data$group=data$quad # this is an option, but some quads have very few presences which makes evaluation impossible
-
-data$group=case_when( #instead, group quads somehow - maybe like this?
-                    data$quad %in% 1:5 ~ 1,
-                    data$quad %in% 6:10 ~ 2,
-                    data$quad %in% 11:15 ~ 3,
-                    data$quad %in% 16:20 ~ 4,
-                    data$quad %in% 21:25 ~ 5,
-                    data$quad %in% 26:30 ~ 6,
-                    data$quad %in% 31:35 ~ 7,
-                    data$quad %in% 36:40 ~ 8,
-                    TRUE ~ 0)
+# data$group=data$quad_id # this is an option, but some quads have very few presences which makes evaluation impossible
+data$group=data$transect_id
 
 # make sure all points are in a group
 if(nrow(filter(data,group==0))>0) stop("some points are not in a group")
 
 ## Extract the information needed to fit with ENMeval
 ##
+
 
 occ_ocr=cbind(x=data$row[data$pres_ocr==1],y=1) %>%  as.matrix()
 occ_ocr.grp=data$group[data$pres_ocr==1]
@@ -78,7 +83,7 @@ occ_scr.grp=data$group[data$pres_scr==1]
 
 
 
-bg.sample=10000  #background sample size from each group
+bg.sample=1000  #background sample size from each group
 bg=data %>%
   group_by(group) %>%
   sample_n(bg.sample)
@@ -125,12 +130,15 @@ nas <- cbind.data.frame(group=occ_ocr.grp,extract(rdata[[model_vars]],occ_ocr,na
             n_data=n_presence-n_na
             )
 
-summary(nas) # look at NA's to see how many presences will be lost with this set of env vars.
+nas # look at NA's to see how many presences will be lost with this set of env vars.
+# n_na is the number of ocr presences that have some missing data (and will be dropped)
+# n_data is the remaining number that will be included.
+
 
 #names(rdata[[model_vars]])
 
 ## Fit model for OCR
-eval_ocr <- ENMevaluate(
+ocr_eval <- ENMevaluate(
                     occ = occ_ocr,
                      occ.grp = occ_ocr.grp,
                      env=rdata[[model_vars]], #select whatever layers you want to include
@@ -144,8 +152,18 @@ eval_ocr <- ENMevaluate(
                     parallel=T,
                     rasterPreds=T)
 
+hist(ocr_eval@results$train.AUC)
+ocr_eval@results
+
+ocr_mod_which <- which.min(ocr_eval@results$AICc)
+ocr_mod_best <- eval_ocr@models[[ocr_mod_which]]
+
+ocr_pred_best <- raster::predict(rdata, ocr_mod_best,  type = "logistic", clamp = T)
+data$ocr_suit <- values(ocr_pred_best)
+
+
 ## Fit model for SCR
-eval_scr <- ENMevaluate(
+scr_eval <- ENMevaluate(
   occ = occ_scr,
   occ.grp = occ_scr.grp,
   env=rdata[[model_vars]], #select whatever layers you want to include
@@ -157,26 +175,87 @@ eval_scr <- ENMevaluate(
   parallel=T,
   rasterPreds=T)
 
+scr_mod_which <- which.min(scr_eval@results$AICc)
+scr_mod_best <- scr_eval@models[[scr_mod_which]]
 
-hist(eval_ocr@results$train.AUC)
-eval_ocr@results
+scr_pred_best <- raster::predict(rdata, scr_mod_best,  type = "logistic", clamp = T)
+data$scr_suit <- values(scr_pred_best)
 
 
-## ENMEval changes the raster dimensions!
-# dim(eval_ocr@predictions)
-# dim(rdata)
-# problem is in maxnet.predictRaster
 
-# Align the new raster with the old one
+### Compare species
+#ocr_raster=eval_ocr@predictions
+#names(ocr_raster)=paste("ocr_",names(ocr_raster))
+#scr_raster=eval_scr@predictions
+#names(scr_raster)=paste("scr_",names(scr_raster))
 
-data$ocr_suit=as.data.frame(eval_ocr@predictions$LQ_0.5)
+combined_raster=stack(ocr_pred_best,scr_pred_best)
+calc.niche.overlap(combined_raster)
+
+
+# map differences between species
+data$niche_dif=values(ocr_pred_best-scr_pred_best)
+
 
 ggplot(data,aes(x=as.factor(pres_ocr),y=ocr_suit))+
   geom_boxplot()+
   scale_y_log10()+
   xlab("OCR Presence")
 
+ggplot(data,aes(x=as.factor(pres_scr),y=scr_suit))+
+  geom_boxplot()+
+  scale_y_log10()+
+  xlab("SCR Presence")
+
+
+## Compare ocr and scr
+ggplot(data,aes(x=scr_suit,y=ocr_suit))+
+  geom_hex(bins=100)+
+  scale_fill_viridis_c(trans="log1p")
+
+ggplot(data,aes(x=niche_dif,y=hole_10))+
+  geom_hex(bins=100)+
+  scale_fill_viridis_c(trans="log1p")
+
 ggplot(data,aes(color=as.factor(pres_ocr),x=ocr_suit))+
   geom_density()+
   scale_x_log10()
 
+
+#############################
+#############################
+#############################
+### Mesh files
+## Build file list
+meshfiles=data.frame(
+  mesh_path=list.files(file.path("output/data/quad"),
+                       pattern=".rds",recursive = T, full=T),
+  stringsAsFactors = F)%>%
+  mutate(
+    fname=basename(mesh_path),
+    quad=sub("[.].*$","",fname))%>%
+  dplyr::select(-fname)%>%
+  as_tibble()
+
+# put predictions back on a particular landscape:
+quad="eut49r"  #choose which quad
+quad="ect14l"  #choose which quad
+quad="ect210r"
+mesh=meshfiles$mesh_path[meshfiles$quad==quad] %>% readRDS()
+
+# then join back with predict_results by fid and quad to be sure everything lines up)
+mesh_predict=left_join(mesh$data, # pull data from mesh object
+                       dplyr::select(data,quad,fid,ocr_suit,scr_suit,niche_dif), # keep only these columns for merging
+                       by=c("quad","fid")) %>% arrange(fid)# %>%
+#  mutate(bio=(coral+sponge+ocr+scr)>0.2,
+#         suitability_nobio=ifelse(bio,0,scr_suit))
+
+
+# plot the predicted suitability on the mesh
+mesh %>%
+  #  meshbase(clean_tol=0.4,adjust_z=0.1,edge_tol=0.01) %>%
+  plotmesh(
+#    mesh_predict$scr_suit, # the column to use to color mesh
+#    mesh_predict$ocr_suit, # the column to use to color mesh
+    mesh_predict$niche_dif, # the column to use to color mesh
+    title="Suitability",showlegend = TRUE)
