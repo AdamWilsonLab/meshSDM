@@ -158,6 +158,9 @@ ocr_eval@results
 ocr_mod_which <- which.min(ocr_eval@results$AICc)
 ocr_mod_best <- eval_ocr@models[[ocr_mod_which]]
 
+
+# Don't use the rasters in the results object - it doesn't align with the original data
+# instead use the prediction function like this:
 ocr_pred_best <- raster::predict(rdata, ocr_mod_best,  type = "logistic", clamp = T)
 data$ocr_suit <- values(ocr_pred_best)
 
@@ -178,24 +181,23 @@ scr_eval <- ENMevaluate(
 scr_mod_which <- which.min(scr_eval@results$AICc)
 scr_mod_best <- scr_eval@models[[scr_mod_which]]
 
+
+# Don't use the rasters in the results object - it doesn't align with the original data
+# instead use the prediction function like this:
 scr_pred_best <- raster::predict(rdata, scr_mod_best,  type = "logistic", clamp = T)
 data$scr_suit <- values(scr_pred_best)
 
 
-
 ### Compare species
-#ocr_raster=eval_ocr@predictions
-#names(ocr_raster)=paste("ocr_",names(ocr_raster))
-#scr_raster=eval_scr@predictions
-#names(scr_raster)=paste("scr_",names(scr_raster))
 
 combined_raster=stack(ocr_pred_best,scr_pred_best)
 calc.niche.overlap(combined_raster)
 
 
-# map differences between species
+# calculate differences between species
 data$niche_dif=values(ocr_pred_best-scr_pred_best)
 
+## A few example plots
 
 ggplot(data,aes(x=as.factor(pres_ocr),y=ocr_suit))+
   geom_boxplot()+
