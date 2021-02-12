@@ -19,6 +19,12 @@
 #' coordinates(x2)
 #' # Visualize the little 1D raster to understand what this is doing.
 #' plot(x2)
+#' # use as.data.frame to convert back to a data.frame.
+#' x3 = as.data.frame(x2)
+#' # confirm the converted version is just like the original
+#' expect_equal(x,x3)
+
+
 #' @import raster
 #' @import tidyverse
 
