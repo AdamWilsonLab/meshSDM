@@ -41,8 +41,12 @@ subsample=F
 if(subsample){
   sn=1e6 #sample size
   data2=bind_rows(
-  sample_n(filter(data,pres_ocr==0),sn),  # keep only a sample of 0s
-  filter(data,pres_ocr==1)) %>%  # keep all presences
+  sample_n(filter(data,
+                  pres_ocr==0,
+                  pres_scr==0),sn),  # keep only a sample of 0s
+  filter(data,
+         pres_ocr==1,
+         pres_scr==1)) %>%  # keep all presences
   mutate(row=1:n())  #reset the row counter - this will be used to link back to the original data
 
 data=data2
@@ -66,6 +70,7 @@ if(F){
 table(data$transect_id)
 
 # data$group=data$quad_id # this is an option, but some quads have very few presences which makes evaluation impossible
+# anything defined in 'group' will be used for cross validation.
 data$group=data$transect_id
 
 # make sure all points are in a group
@@ -93,7 +98,7 @@ bg.grp=bg$group
 
 # Confirm all quads have some data
 bg %>%
-  group_by(bg$group) %>%
+  group_by(group) %>%
   summarize(n=n())
 
 # Confirm all quads have some data
@@ -120,7 +125,8 @@ model_vars=c("hole_5","hole_10","hole_100",
              "coral","sponge","rock","sand")
 
 # Check missing data for
-nas <- cbind.data.frame(group=occ_ocr.grp,extract(rdata[[model_vars]],occ_ocr,na.rm=F)) %>%
+nas <- cbind.data.frame(group=occ_ocr.grp,
+                        raster::extract(rdata[[model_vars]],occ_ocr,na.rm=F)) %>%
   rowwise() %>%
   mutate(na_vars = sum(is.na(c_across())),
          na_any=na_vars>0) %>%
@@ -258,6 +264,10 @@ mesh %>%
   #  meshbase(clean_tol=0.4,adjust_z=0.1,edge_tol=0.01) %>%
   plotmesh(
 #    mesh_predict$scr_suit, # the column to use to color mesh
-#    mesh_predict$ocr_suit, # the column to use to color mesh
-    mesh_predict$niche_dif, # the column to use to color mesh
+    mesh_predict$ocr_suit, # the column to use to color mesh
+#    mesh_predict$slope_10, # the column to use to color mesh
+#    mesh_predict$niche_dif, # the column to use to color mesh
     title="Suitability",showlegend = TRUE)
+
+mesh2ply(mesh, filename = paste0("output/mesh_output/",quad,".ply"), col = mesh_predict$ocr_suit, writeNormals = TRUE)
+

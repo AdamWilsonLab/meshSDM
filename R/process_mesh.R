@@ -9,7 +9,8 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
   # read in mesh file
   mesh_full=vcgPlyRead(mesh_file,clean = T,updateNormals = F)
 
-  mesh=vcgSmooth(mesh_full,iteration = 5,type="taubin",lambda = .5,mu=1)%>%
+  mesh=vcgSmooth(mesh_full,iteration = 5,type="taubin",lambda = .5,mu=1) %>%
+ #   vcgBallPivoting(radius = 1,clustering = 0.2, angle = pi/2, deleteFaces = FALSE) %>%
     vcgClean(sel=c(0,1,6,1),tol=mesh_tol)%>%
     vcgUpdateNormals()
 
@@ -37,8 +38,21 @@ process_mesh<-function(mesh_file,pts,mesh_tol=0.001){
   faces_data_all <- pts%>%
     group_by(fid)%>%
     dplyr::select(-x,-y,-z)%>% # don't take median of the coordinates
-    summarize_if(is.numeric,median, na.rm=T)%>%
+#    summarize_if(is.numeric,median, na.rm=T)%>%
+    summarise(across(is.numeric,median),npts=n()) %>%
     mutate(scale=pts$scale[1],id=pts$id[1]) #add metadata back to dataset
+
+# Fill gaps by taking median of nearby points
+# perhaps subset the mesh to only the ones with missing data and then find the closest points again?
+# commented section below is not working.
+#  nas=na.omit(faces_data_all) %>% attr("na.action") %>% as.numeric()
+#
+#pts_close2=vcgClost(x=as.matrix(pts[,c("x","y","z")]),
+#                   mesh = mesh,
+#                   borderchk = TRUE)
+#pts$fid=pts_close$faceptr
+#pts$point_border=pts_close$border
+#ts$point_dist=pts_close$quality
 
   # generate percentage of points in each class for each face
   # e.g. what % of points in each face were coral?

@@ -65,7 +65,7 @@ rfiles=data.frame(
 files=cfiles%>%
   left_join(rfiles,by="quad")%>%
   left_join(qfiles,by="quad")%>%
-  select(quad,scale,point_path,mesh_path,occurrence_path)%>%
+  dplyr::select(quad,scale,point_path,mesh_path,occurrence_path)%>%
   mutate(output_path=file.path(outputdir,paste0(quad,"_",sub("s_","",scale),".rds")))
 
 
