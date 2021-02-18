@@ -6,6 +6,7 @@ library(viridis)
 devtools::load_all(".")
 library(raster)
 library(sf)
+library(SDMtune)
 
 ### load the combined data
 data<-readRDS("output/data/datawide.rds") %>%
@@ -153,16 +154,22 @@ ocr_eval <- ENMevaluate(
                      method='user',
 #                     method='randomkfold',
 #                    kfolds=10,
-                    fc="LQ",
+                    fc="LQHPT",
                     numCores=20,
                     parallel=T,
                     rasterPreds=T)
 
 hist(ocr_eval@results$train.AUC)
 ocr_eval@results
-
 ocr_mod_which <- which.min(ocr_eval@results$AICc)
-ocr_mod_best <- eval_ocr@models[[ocr_mod_which]]
+ocr_mod_best <- ocr_eval@models[[ocr_mod_which]]
+
+# might be possible to convert to SDMtune format to extract response curves and variable importance.
+#ocr_data <- prepareSWD(species = "ocr", p = occ_ocr, a = bg.coords,
+#                   env = rdata[[model_vars]])
+#slot(ocr_mod_best,"data",check=F) <- ocr_data
+#ocr_varimp <- varImp(ocr_mod_best, permut = 5)
+
 
 
 # Don't use the rasters in the results object - it doesn't align with the original data

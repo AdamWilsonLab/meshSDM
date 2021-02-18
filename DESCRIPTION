@@ -16,7 +16,9 @@ Imports:
     viridis,
     colourvalues,
     sf,
-    raster
+    raster,
+    ENMeval,
+    SDMtune
 Suggests: 
     plotly,
     testthat
