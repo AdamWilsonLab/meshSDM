@@ -116,20 +116,51 @@ data %>%
   summarize(n=n())
 
 
+
+grps=unique(data$group)
+
+
+
+## Try building folds for SDMTune
+folds <- randomFolds(data2, k = 4, only_presence = TRUE, seed = 25)
+
+groups=unique(data$group)
+
+train=apply(matrix(data$group),1,function(x) x!=groups)
+head(train)
+    test=data$group!=i)
+
+str(folds)
+
+####
 ##############################################################
 ## ENMeval
 library(ENMeval)
 
 model_vars_ocr=c("hole_5","hole_10","hole_50","hole_100",
-                 "slope_5","slope_100",
+                 "slope_5","slope_100","hole_20",
                  "rough_5","rough_10", "rough_50","rough_100",
                  "coral","sponge","octocoral",
                  "sand","ground", "rock",
                  "scr")
 
-# Check missing data for
-nas <- cbind.data.frame(group=occ_ocr.grp,
-                        raster::extract(rdata[[model_vars]],occ_ocr,na.rm=F)) %>%
+# Check missing data
+nas_all_ocr <- cbind.data.frame(group=occ_ocr.grp,
+                        raster::extract(rdata[[model_vars_ocr]],occ_ocr,na.rm=F))
+nas_all_scr <- cbind.data.frame(group=occ_scr.grp,
+                                raster::extract(rdata[[model_vars_ocr]],occ_scr,na.rm=F))
+
+# count by var
+nas_all_ocr %>%
+  summarise_all(function(x) sum(is.na(x))) %>%
+  t()
+
+nas_all_scr %>%
+  summarise_all(function(x) sum(is.na(x))) %>%
+  t()
+
+# count by quad
+nas_all_ocr %>%
   rowwise() %>%
   mutate(na_vars = sum(is.na(c_across())),
          na_any=na_vars>0) %>%
@@ -179,6 +210,11 @@ model <- train(method = "Maxnet", data = ocr_data, fc = "lqph", reg = 1, iter = 
 
 ocr_varimp <- varImp(model, permut = 5)
 plotResponse(model,var="rough_10")
+plotResponse(model,var="hole_100")
+
+
+
+
 
 # Don't use the rasters in the results object - it doesn't align with the original data
 # instead use the prediction function like this:
