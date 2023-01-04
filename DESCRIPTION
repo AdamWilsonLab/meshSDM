@@ -2,8 +2,8 @@ Package: meshSDM
 Type: Package
 Title: 3 Dimensional Species Distribution Models
 Version: 0.0.1
-Author: Adam M. Wilson <adamw@buffalo.edu>
-Maintainer: Adam M. Wilson <adamw@buffalo.edu>
+Author: Adam M. Wilson <adamw@buffalo.edu> and Angela Martinez Quintana <am298@buffalo.edu>
+Maintainer: Angela Martinez Quintana <am298@buffalo.edu>
 Description: Set of functions to assist in building species distribution models on 3D mesh. Designed to process fine grain (~1mm resolution) topographic meshes of coral reef environments and prepare data for distribution modelling using models such as Maxent. This is in 'alpha' state - not all functions are working correctly.  Use at your own risk.
 License: MIT + file LICENSE
 Encoding: UTF-8
