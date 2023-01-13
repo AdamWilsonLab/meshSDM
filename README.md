@@ -47,9 +47,9 @@ library(meshSDM)
     * Calculate variable importance.
     * Test for variable correlation and select the most important from the pairs of correlated variables (|r|>0.6).
 - For each taxon: 
-    * Test the performance of models built with the different regularization multipliers
-    * Selected the model with the best performance based on AUC and Bohl tests
-    * Train the model with 70% of the occurrences and validate in 30%
+    * Test the performance of models built with different regularization multipliers.
+    * Selected the model with the best performance based on AUC and Bohl tests.
+    * Train the model with 70% of the occurrences and validate in the remaining 30%.
     * Plot predicted habitat suitability on the mesh.
 - Code for the following figures:
     * **Figure 3** and **Figure 4**.
