@@ -29,14 +29,20 @@ files=data.frame(
 # columns to drop from the data before reshaping
 dropvars=c("r","g","b","Nx","Ny","Nz","x","y","z")
 
-classvars=c("coral","sponge","octocoral","rock","ground","ocr","scr","algae","rock_igneous","sand","other")
+#List of classifiers annotated on each point cloud
+##Coral = adult coral; sponge = sponge, octocoral = octocoral base;
+##rock = igneous rock= rock_igneous;ground ="calcareous rock";
+##ocr = octocoral recruit; scr = scleractinian recruit,
+#algae = algae (drop from the analysis), sand = sand, other = other
+
+classvars=c("coral","sponge","octocoral","rock","ground",
+            "ocr","scr","algae","rock_igneous","sand","other")
 
 # idvars to not 'gather' - these are things that do not vary by scale
 idvars=c("quad","fid",
          "pres_ocr","pres_scr",
          classvars,
-         "visible")
-
+         "visible")#recruits visible from the top-down perspective
 
 dataw=foreach(i=1:nrow(files),.combine=bind_rows, .inorder = F)%dopar%{
   f=files[i,]
@@ -57,6 +63,6 @@ datal=dataw %>%
   filter(!is.na(value)) #drop missing observations
 
 ### Save them
-saveRDS(dataw,"output/data/datawide.rds")
+saveRDS(dataw,"output/data/datawide.rds")#only datawide.rds is used in the analysis
 saveRDS(datal,"output/data/datalong.rds")
 

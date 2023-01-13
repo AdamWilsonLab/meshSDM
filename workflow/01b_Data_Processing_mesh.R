@@ -21,7 +21,18 @@ dropvars=c("mesh_border","mesh_curve","point_border",
            "point_dist","id","dist","sign","gc","angle",
            "pres_ocr_torus","pres_scr_torus")
 
-classvars=c("coral","sponge","octocoral","rock","ground","ocr","scr","algae","rock_igneous","sand","other")
+#List of classifiers annotated on each point cloud
+##Coral = adult coral; sponge = sponge, octocoral = octocoral base;
+##rock = igneous rock= rock_igneous;ground ="calcareous rock";
+##ocr = octocoral recruit; scr = scleractinian recruit,
+#algae = algae (drop from the analysis), sand = sand, other = other
+classvars=c("coral","sponge","octocoral","rock","ground","ocr","scr",
+            "algae","rock_igneous","sand","other")
+
+#Topographic variables
+##rough = roughness, aspect = aspect (not used in the analysis);density = point cloud density;
+##Slope = slope, hole = TEI, gcs = Gaussian curvature
+#
 
 valvars=c("rough","aspect","density","slope","hole","gcs")
 
@@ -30,7 +41,7 @@ idvars=c("quad","scale","fid",
          "x","y","z","r","g","b","Nx","Ny","Nz",
          "pres_ocr","pres_scr",
          classvars,
-         "visible")
+         "visible")#recruits visible from the top-down perspective
 
 
 ## Build file list
