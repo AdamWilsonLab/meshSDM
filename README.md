@@ -33,7 +33,7 @@ library(meshSDM)
 
 - Read in the individual quadrat data, rbind it, and reshape it to the format needed for EDA and modeling.
 
-`03_Data_Processing_ENMTools.R`
+`03_Variable_Processing_ENMTools.R`
 
 - Quadrats are grouped in 8 groups to avoid spatial autocorrelation.
 - Sample 30000 background points from each group of quadrats and all the occurrences (recruits).
