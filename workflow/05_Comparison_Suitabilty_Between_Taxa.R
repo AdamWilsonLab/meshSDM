@@ -1,13 +1,12 @@
 
 
-#Breath: This function measures the spatial heterogeneity of the distribution of suitability scores
-#from an ENM. It returns Levins’ two metrics of niche breadth.
+#The raster.breadth function measures the spatial heterogeneity of the distribution of suitability scores from an ENM.
+#It returns Levins’ two metrics of niche breadth.
 
 G_breadth_ocr <- raster.breadth(ocr_model3_new) #in G-space
 G_breadth_scr <- raster.breadth(scr_model3_new)
 
 # env.breadth() Calculates breadth of a model in E-space using latin hypercube sampling
-
 
 env.breadth(ocr_model3_new, env2new, tolerance = 1e-04, max.reps = 300, chunk.size = 1e+06)
 env.breadth(scr_model3_new, env2new, tolerance = 1e-04, max.reps = 300, chunk.size = 1e+06)
@@ -35,8 +34,7 @@ minidatascr$datatype <- recode_factor(minidatascr$datatype, "1" = "pres",
 recscore <- merge(minidataocr, minidatascr, all.x = TRUE, all.y = TRUE) %>%
   na.omit()
 
-
-#vIOLIN PLOT COMPARING SUITABILITY FOR EACH TAXA #############################
+##VIOLIN PLOT COMPARING SUITABILITY FOR EACH TAXA #############################
 
 rec <- c("Octocoral", "Scleractinian")
 names(rec) <- c("ocr", "scr")
@@ -92,7 +90,6 @@ identity.test <- identity.test(species.1 = ocr, species.2 = scr, env = env2new, 
                                bg.source = "points",
                                type = "mx", nreps = 100)
 
-
 #Background test (symmetric):
 #These test compare the empirical overlap to the overlap expected when points
 #are drawn randomly from the background of both species
@@ -106,8 +103,6 @@ bg.bc.sym = background.test(species.1 = ocr,
                             type = "mx",
                             nreps = 100,
                             test.type = "symmetric")
-
-bg.bc.sym
 
 ###Test whether the amount of suitable habitat on the reef is simialr between taxa:
 
