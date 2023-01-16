@@ -3,7 +3,7 @@
 
 A collection of functions and the workflow used to fit and project Species Distribution Models (SDMs) on 3D meshes in **"Three-dimensional species distribution modeling reveals the realized spatial niche for coral recruitment on contemporary Caribbean reefs"(Martínez-Quintana et al., 2023)**.
 
-## Abstract (To be substituted with graphical abstract)
+## Abstract 
 
 The 3-dimensional structure of habitats is a critical component of species' niches driving coexistence in species-rich ecosystems. However, its influence on structuring and partitioning recruitment niches has not been widely addressed. We developed a new method to combine Species Distribution Modeling and Structure from Motion and characterized three-dimensional recruitment niches of two ecosystem engineers on Caribbean coral reefs, scleractinian corals and gorgonians. Fine-scale roughness was the most important predictor of suitable habitat for both taxa, and their niches largely overlapped, primarily due to scleractinians broader niche breadth. Crevices and holes at mm-scales on calcareous rock with low coral cover were more suitable for octocorals than for scleractinian recruits, suggesting the decline of scleractinian corals is facilitating the recruitment of octocorals on contemporary Caribbean reefs. However, the relative abundances of the taxa were independent of the amount of suitable habitat on the reef, emphasizing niche-processes solely do not predict recruitment rates.
 
