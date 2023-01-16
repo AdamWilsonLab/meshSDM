@@ -13,7 +13,7 @@ devtools::install_github("https://github.com/AdamWilsonLab/meshSDM.git")
 library(meshSDM)
 ```
 - Functions used in the library meshSDM can be found in the `R` folder. 
-- Data are found here (link to Zenodo)
+- Data are found in [Zenodo public repository](https://doi.org/10.5281/zenodo.7487349)
 - Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder and scripts can be run in the following order:
 
 `01_Data_Processing_mesh.R`
