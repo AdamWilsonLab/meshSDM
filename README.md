@@ -66,5 +66,6 @@ library(meshSDM)
     * Symmetric Background test (**Figure 5B**).
     * Shapiro-Wilk normality test and Mann-Withey U test.
 
+To uninstall the package, we suggest `remove.packages("meshSDM")`.
 
 
