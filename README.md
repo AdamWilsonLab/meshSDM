@@ -13,7 +13,7 @@ This repository is structured as an R package, however it was written to perform
 
 - Data are found in [Zenodo public repository](https://doi.org/10.5281/zenodo.7487349).
 - Functions used in the library meshSDM can be found in the `R` folder. 
-- Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder. Within the `workflow` folder scripts are organized in order and they should be run as follows:
+- Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder. **Within the `workflow` folder scripts are organized in order and they should be run as follows**:
 
 `workflow/01_Data_Processing_mesh.R`
 
