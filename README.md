@@ -12,7 +12,7 @@ The 3-dimensional structure of habitats is a critical component of species' nich
 This repository is structured as an R package, however it was written to perform a particular set of analyses for this paper.  Not all functions are well documented and some are specific to our particular dataset.  If you want to rerun all or part of the analysis, you should start running the functions in the `R` folder first, and then you can follow the scripts in the `workflow` folder.  If you want to use these functions on another dataset, some modifications may be necessary. 
 
 - Data are found in [Zenodo public repository](https://doi.org/10.5281/zenodo.7487349).
-- Functions used in the library meshSDM can be found in the `R` folder. 
+- Functions used in the library meshSDM can be found in the `R` folder. Within the `R` folder the function `process_point_cloud` defines the Topographic Exposure Index (TEI) defined in the manuscript.
 - Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder. **Within the `workflow` folder scripts are organized in order and they should be run as follows**:
 
 `workflow/01_Data_Processing_mesh.R`
