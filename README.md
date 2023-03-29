@@ -1,7 +1,7 @@
 
 # meshSDM
 
-A collection of functions and the workflow used to fit and project Species Distribution Models (SDMs) on 3D meshes in **"Three-dimensional species distribution modeling reveals the realized spatial niche for coral recruitment on contemporary Caribbean reefs"(Martínez-Quintana et al., 2023)**.
+A collection of user-defined functions and the workflow and scripts used to fit and project Species Distribution Models (SDMs) on 3D meshes in **"Three-dimensional species distribution modeling reveals the realized spatial niche for coral recruitment on contemporary Caribbean reefs"(Martínez-Quintana et al., 2023)**.
 
 ## Abstract 
 
@@ -9,11 +9,11 @@ The 3-dimensional structure of habitats is a critical component of species' nich
 
 ## Overview
 
-This repository is structured as an R package, however it was written to perform a particular set of analyses for this paper.  Not all functions are well documented and some are specific to our particular dataset.  If you want to rerun all or part of the analysis, you can follow the scripts in the `workflow` folder.  If you want to use these functions on another dataset, some modifications may be necessary. 
+This repository is structured as an R package, however it was written to perform a particular set of analyses for this paper.  Not all functions are well documented and some are specific to our particular dataset.  If you want to rerun all or part of the analysis, you should start running the functions in the `R` folder first, and then you can follow the scripts in the `workflow` folder.  If you want to use these functions on another dataset, some modifications may be necessary. 
 
+- Data are found in [Zenodo public repository](https://doi.org/10.5281/zenodo.7487349).
 - Functions used in the library meshSDM can be found in the `R` folder. 
-- Data are found in [Zenodo public repository](https://doi.org/10.5281/zenodo.7487349)
-- Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder and scripts can be run in the following order:
+- Scripts to process and reshape the data prior to analysis, to fit and project Maxent on 3D meshes,and to compare habitat suitability between taxa are available in the `workflow` folder. Within the `workflow` folder scripts are organized in order and they should be run as follows:
 
 `workflow/01_Data_Processing_mesh.R`
 
