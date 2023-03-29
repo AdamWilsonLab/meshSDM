@@ -1,4 +1,6 @@
 #' @import tidyverse
+#In this function we used the smooth point cloud calculated in CloudCompare to calculate the new metric Topographic Exposure Index (TEI). 
+#TEI is coded as "hole".
 
 process_point_cloud<-function(path,id,scale=NULL,offset=0){
 
